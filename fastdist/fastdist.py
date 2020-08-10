@@ -48,9 +48,10 @@ def braycurtis(u, v, w=None):
     >>> fastdist.braycurtis(u, v, w)
     0.3359619981199086
     """
-    w = init_w(w, len(u))
+    n = len(u)
+    w = init_w(w, n)
     num, denom = 0, 0
-    for i in range(len(u)):
+    for i in range(n):
         num += abs(u[i] - v[i]) * w[i]
         denom += abs(u[i] + v[i]) * w[i]
     return num / denom
@@ -78,9 +79,10 @@ def canberra(u, v, w=None):
     >>> fastdist.canberra(u, v, w)
     1951.0399135013315
     """
-    w = init_w(w, len(u))
+    n = len(u)
+    w = init_w(w, n)
     dist = 0
-    for i in range(len(u)):
+    for i in range(n):
         num = abs(u[i] - v[i])
         denom = abs(u[i]) + abs(v[i])
         dist += num / denom * w[i]
@@ -108,7 +110,7 @@ def chebyshev(u, v, w=None):
     >>> fastdist.chebyshev(u, v, w)
     0.9934922585052587
     """
-    return max(u - v)
+    return max(np.abs(u - v))
 
 
 @jit(nopython=True, fastmath=True)
@@ -133,9 +135,10 @@ def cityblock(u, v, w=None):
     >>> fastdist.cityblock(u, v, w)
     1667.904767711218
     """
-    w = init_w(w, len(u))
+    n = len(u)
+    w = init_w(w, n)
     dist = 0
-    for i in range(len(u)):
+    for i in range(n):
         dist += abs(u[i] - v[i]) * w[i]
     return dist
 
@@ -162,11 +165,12 @@ def correlation(u, v, w=None, centered=True):
     >>> fastdist.correlation(u, v, w)
     0.9907907248975348
     """
-    w = init_w(w, len(u))
+    n = len(u)
+    w = init_w(w, n)
     u_centered, v_centered = u - np.mean(u), v - np.mean(v)
     num = 0
     u_norm, v_norm = 0, 0
-    for i in range(len(u_centered)):
+    for i in range(n):
         num += u_centered[i] * v_centered[i] * w[i]
         u_norm += abs(u_centered[i]) ** 2 * w[i]
         v_norm += abs(v_centered[i]) ** 2 * w[i]
@@ -198,10 +202,11 @@ def cosine(u, v, w=None):
     >>> fastdist.cosine(u, v, w)
     0.7495065944399267
     """
-    w = init_w(w, len(u))
+    n = len(u)
+    w = init_w(w, n)
     num = 0
     u_norm, v_norm = 0, 0
-    for i in range(len(u)):
+    for i in range(n):
         num += u[i] * v[i] * w[i]
         u_norm += abs(u[i]) ** 2 * w[i]
         v_norm += abs(v[i]) ** 2 * w[i]
@@ -251,7 +256,7 @@ def cosine_matrix_to_matrix(a, b):
     Computes the cosine similarity between the rows of two matrices
 
     :params:
-    a, b   : input matrices either of shape (m, n) and (k, n)
+    a, b   : input matrices of shape (m, n) and (k, n)
              the matrices must share a common dimension at index 1
 
     :returns:
@@ -311,18 +316,19 @@ def cosine_pairwise_distance(a, return_matrix=False):
     >>> fastdist.cosine_pairwise_distance(a, return_matrix=True)
     (returns an array of shape (10, 10))
     """
-    rows = np.arange(a.shape[0])
-    perm = [(rows[i], rows[j]) for i in range(len(rows)) for j in range(i + 1, len(rows))]
-    for i in range(a.shape[0]):
+    n = a.shape[0]
+    rows = np.arange(n)
+    perm = [(rows[i], rows[j]) for i in range(n) for j in range(i + 1, n)]
+    for i in range(n):
         norm = 0
         for j in range(len(a[i])):
             norm += abs(a[i][j]) ** 2
         a[i] = a[i] / norm ** (1 / 2)
 
     if return_matrix:
-        out_mat = np.zeros((len(rows), len(rows)))
-        for i in range(len(rows)):
-            for j in range(i):
+        out_mat = np.zeros((n, n))
+        for i in range(n):
+            for j in range(n):
                 out_mat[i][j] = np.dot(a[i], a[j])
         return out_mat + out_mat.T
     else:
@@ -354,9 +360,10 @@ def euclidean(u, v, w=None):
     >>> fastdist.euclidean(u, v, w)
     28.822558591834163
     """
-    w = init_w(w, len(u))
+    n = len(u)
+    w = init_w(w, n)
     dist = 0
-    for i in range(len(u)):
+    for i in range(n):
         dist += abs(u[i] - v[i]) ** 2 * w[i]
     return dist ** (1 / 2)
 
@@ -471,9 +478,10 @@ def minkowski(u, v, p, w=None):
     >>> fastdist.minkowski(u, v, p, w)
     7.904971256091215
     """
-    w = init_w(w, len(u))
+    n = len(u)
+    w = init_w(w, n)
     dist = 0
-    for i in range(len(u)):
+    for i in range(n):
         dist += abs(u[i] - v[i]) ** p * w[i]
     return dist ** (1 / p)
 
@@ -523,9 +531,10 @@ def sqeuclidean(u, v, w=None):
     >>> fastdist.sqeuclidean(u, v, w)
     830.7398837797134
     """
-    w = init_w(w, len(u))
+    n = len(u)
+    w = init_w(w, n)
     dist = 0
-    for i in range(len(u)):
+    for i in range(n):
         dist += abs(u[i] - v[i]) ** 2 * w[i]
     return dist
 
@@ -553,9 +562,10 @@ def dice(u, v, w=None):
     >>> fastdist.dice(u, v, w)
     0.5008483098538385
     """
-    w = init_w(w, len(u))
+    n = len(u)
+    w = init_w(w, n)
     num, denom = 0, 0
-    for i in range(len(u)):
+    for i in range(n):
         num += u[i] * v[i] * w[i]
         denom += (u[i] + v[i]) * w[i]
     return 1 - 2 * num / denom
@@ -584,9 +594,10 @@ def hamming(u, v, w=None):
     >>> fastdist.hamming(u, v, w)
     0.5061006361240681
     """
-    w = init_w(w, len(u))
+    n = len(u)
+    w = init_w(w, n)
     num, denom = 0, 0
-    for i in range(len(u)):
+    for i in range(n):
         if u[i] != v[i]:
             num += w[i]
         denom += w[i]
@@ -616,9 +627,10 @@ def jaccard(u, v, w=None):
     >>> fastdist.jaccard(u, v, w)
     0.6674202936639468
     """
-    w = init_w(w, len(u))
+    n = len(u)
+    w = init_w(w, n)
     num, denom = 0, 0
-    for i in range(len(u)):
+    for i in range(n):
         if u[i] != v[i]:
             num += w[i]
             denom += w[i]
@@ -649,9 +661,10 @@ def kulsinski(u, v, w=None):
     >>> fastdist.kulsinski(u, v, w)
     0.8325522836573094
     """
-    w = init_w(w, len(u))
+    n = len(u)
+    w = init_w(w, n)
     num, denom = 0, 0
-    for i in range(len(u)):
+    for i in range(n):
         num += (1 - u[i] * v[i]) * w[i]
         if u[i] != v[i]:
             num += w[i]
@@ -683,9 +696,10 @@ def rogerstanimoto(u, v, w=None):
     >>> fastdist.rogerstanimoto(u, v, w)
     0.672067488699178
     """
-    w = init_w(w, len(u))
+    n = len(u)
+    w = init_w(w, n)
     r, denom = 0, 0
-    for i in range(len(u)):
+    for i in range(n):
         if u[i] != v[i]:
             r += 2 * w[i]
         else:
@@ -716,9 +730,10 @@ def russellrao(u, v, w=None):
     >>> fastdist.russellrao(u, v, w)
     0.7478068878987577
     """
-    w = init_w(w, len(u))
+    n = len(u)
+    w = init_w(w, n)
     num, n = 0, 0
-    for i in range(len(u)):
+    for i in range(n):
         num += u[i] * v[i] * w[i]
         n += w[i]
     return (n - num) / n
@@ -754,9 +769,10 @@ def sokalmichener(u, v, w=None):
     r += 2 * w[i] with r += 2, but then that does not apply the weights.
     so, we use (what we think) is the correct weight implementation
     """
-    w = init_w(w, len(u))
+    n = len(u)
+    w = init_w(w, n)
     r, s = 0, 0
-    for i in range(len(u)):
+    for i in range(n):
         if u[i] != v[i]:
             r += 2 * w[i]
         else:
@@ -787,9 +803,10 @@ def sokalsneath(u, v, w=None):
     >>> fastdist.sokalsneath(u, v, w)
     0.8005423661929552
     """
-    w = init_w(w, len(u))
+    n = len(u)
+    w = init_w(w, n)
     r, denom = 0, 0
-    for i in range(len(u)):
+    for i in range(n):
         if u[i] != v[i]:
             r += 2 * w[i]
         denom += u[i] * v[i] * w[i]
@@ -819,9 +836,10 @@ def yule(u, v, w=None):
     >>> fastdist.yule(u, v, w)
     1.0244476251862624
     """
-    w = init_w(w, len(u))
+    n = len(u)
+    w = init_w(w, n)
     ctf, cft, ctt, cff = 0, 0, 0, 0
-    for i in range(len(u)):
+    for i in range(n):
         if u[i] != v[i] and u[i] == 1:
             ctf += w[i]
         elif u[i] != v[i] and u[i] == 0:
@@ -868,8 +886,9 @@ def vector_to_matrix_distance(u, m, metric, metric_name):
     if metric_name == "cosine":
         return cosine_vector_to_matrix(u, m)
 
-    out = np.zeros((m.shape[0]))
-    for i in range(m.shape[0]):
+    n = m.shape[0]
+    out = np.zeros((n))
+    for i in range(n):
         out[i] = metric(u, m[i])
     return out
 
@@ -908,10 +927,10 @@ def matrix_to_matrix_distance(a, b, metric, metric_name):
     """
     if metric_name == "cosine":
         return cosine_matrix_to_matrix(a, b)
-
-    out = np.zeros((a.shape[0], b.shape[0]))
-    for i in range(a.shape[0]):
-        for j in range(b.shape[0]):
+    n, m = a.shape[0], b.shape[0]
+    out = np.zeros((n, m))
+    for i in range(n):
+        for j in range(m):
             out[i][j] = metric(a[i], b[j])
     return out
 
@@ -956,11 +975,12 @@ def matrix_pairwise_distance(a, metric, metric_name, return_matrix=False):
         return cosine_pairwise_distance(a, return_matrix)
 
     else:
-        rows = np.arange(a.shape[0])
-        perm = [(rows[i], rows[j]) for i in range(len(rows)) for j in range(i + 1, len(rows))]
+        n = a.shape[0]
+        rows = np.arange(n)
+        perm = [(rows[i], rows[j]) for i in range(n) for j in range(i + 1, n)]
         if return_matrix:
-            out_mat = np.zeros((len(rows), len(rows)))
-            for i in range(len(rows)):
+            out_mat = np.zeros((n, n))
+            for i in range(n):
                 for j in range(i):
                     out_mat[i][j] = metric(a[i], a[j])
             return out_mat + out_mat.T
