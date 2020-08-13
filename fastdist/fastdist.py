@@ -989,3 +989,427 @@ def matrix_pairwise_distance(a, metric, metric_name, return_matrix=False):
             for i in range(len(perm)):
                 out[i] = metric(a[perm[i][0]], a[perm[i][1]])
             return out
+
+
+## START OF SKLEARN METRICS IMPLEMENTATION
+
+@jit(nopython=True, fastmath=True)
+def variance(u, w=None):
+    """
+    :purpose:
+    Computes the variance of a 1D array, used for r2 and explained variance score
+
+    :params:
+    u      : input array of shape (n,)
+    w      : weights at each index of u. array of shape (n,)
+             if no w is set, it is initialized as an array of ones
+             such that it will have no impact on the output
+
+    :returns:
+    variance : float, the variance of u
+
+    :example:
+    >>> from fastdist import fastdist
+    >>> import numpy as np
+    >>> u, w = np.random.RandomState(seed=0).rand(10000, 2).T
+    >>> fastdist.variance(u, w)
+    0.08447496068498446
+    """
+    n = len(u)
+    w = init_w(w, n)
+    num, denom = 0, 0
+    for i in range(n):
+        num += u[i] * w[i]
+        denom += w[i]
+    m = num / denom
+    num, denom = 0, 0
+    for i in range(n):
+        num += abs(u[i] - m) ** 2 * w[i]
+        denom += w[i]
+    return num / denom
+
+
+@jit(nopython=True, fastmath=True)
+def r2_score(true, pred, w=None):
+    """
+    :purpose:
+    Computes the r2 score between a predictions array and a target array
+
+    :params:
+    true, pred : input arrays, both of shape (n,)
+    w          : weights at each index of true and pred. array of shape (n,)
+                 if no w is set, it is initialized as an array of ones
+                 such that it will have no impact on the output
+
+    :returns:
+    r2_score : float, the r2 score of the targets and predictions
+
+    :example:
+    >>> from fastdist import fastdist
+    >>> import numpy as np
+    >>> true, pred, w = np.random.RandomState(seed=0).rand(10000, 3).T
+    >>> fastdist.r2_score(true, pred, w)
+    -0.9797313432213313
+    """
+    n = len(true)
+    w = init_w(w, n)
+    var_true = variance(true, w)
+    num, denom = 0, 0
+    for i in range(n):
+        num += (pred[i] - true[i]) ** 2 * w[i]
+        denom += w[i]
+    return 1 - ((num / denom) / var_true)
+
+
+@jit(nopython=True, fastmath=True)
+def explained_variance_score(true, pred, w=None):
+    """
+    :purpose:
+    Computes the explained variance score between a predictions array and a target array
+
+    :params:
+    true, pred : input arrays, both of shape (n,)
+    w          : weights at each index of true and pred. array of shape (n,)
+                 if no w is set, it is initialized as an array of ones
+                 such that it will have no impact on the output
+
+    :returns:
+    explained_variance_score : float, the explained variance score of the targets and predictions
+
+    :example:
+    >>> from fastdist import fastdist
+    >>> import numpy as np
+    >>> true, pred, w = np.random.RandomState(seed=0).rand(10000, 3).T
+    >>> fastdist.explained_variance_score(true, pred, w)
+    -0.979414934822632
+    """
+    var_true = variance(true, w=w)
+    var_diff = variance(pred - true, w=w)
+    return 1 - (var_diff / var_true)
+
+
+@jit(nopython=True, fastmath=True)
+def max_error(true, pred, w=None):
+    """
+    :purpose:
+    Computes the max error between a predictions array and a target array
+
+    :params:
+    true, pred : input arrays, both of shape (n,)
+    w          : here, w does nothing. it is only here for consistency
+                 with the other functions
+
+    :returns:
+    max_error : float, the max error of the targets and predictions
+
+    :example:
+    >>> from fastdist import fastdist
+    >>> import numpy as np
+    >>> true, pred, w = np.random.RandomState(seed=0).rand(10000, 3).T
+    >>> fastdist.max_error(true, pred, w)
+    0.9934922585052587
+    """
+    return max(np.abs(true - pred))
+
+
+@jit(nopython=True, fastmath=True)
+def mean_absolute_error(true, pred, w=None):
+    """
+    :purpose:
+    Computes the mean absolute error between a predictions array and a target array
+
+    :params:
+    true, pred : input arrays, both of shape (n,)
+    w          : weights at each index of true and pred. array of shape (n,)
+                 if no w is set, it is initialized as an array of ones
+                 such that it will have no impact on the output
+
+    :returns:
+    mean_absolute_error : float, the mean absolute error of the targets and predictions
+
+    :example:
+    >>> from fastdist import fastdist
+    >>> import numpy as np
+    >>> true, pred, w = np.random.RandomState(seed=0).rand(10000, 3).T
+    >>> fastdist.mean_absolute_error(true, pred, w)
+    0.3353421174411754
+    """
+    n = len(true)
+    w = init_w(w, n)
+    num, denom = 0, 0
+    for i in range(n):
+        num += abs(true[i] - pred[i]) * w[i]
+        denom += w[i]
+    return num / denom
+
+
+@jit(nopython=True, fastmath=True)
+def mean_squared_error(true, pred, w=None, squared=True):
+    """
+    :purpose:
+    Computes the mean squared error between a predictions array and a target array
+    (can also be used for root mean squared error by setting squared=False)
+
+    :params:
+    true, pred : input arrays, both of shape (n,)
+    w          : weights at each index of true and pred. array of shape (n,)
+                 if no w is set, it is initialized as an array of ones
+                 such that it will have no impact on the output
+    squared    : whether to return MSE or RMSE, defaults to True, which
+                 returns MSE (set to false for RMSE)
+
+    :returns:
+    mean_squared_error : float, the mean squared error of the targets and predictions
+
+    :example for mean_squared_error:
+    >>> from fastdist import fastdist
+    >>> import numpy as np
+    >>> true, pred, w = np.random.RandomState(seed=0).rand(10000, 3).T
+    >>> fastdist.mean_squared_error(true, pred, w, squared=True)
+    0.16702516658178812
+
+    :example for root_mean_squared error:
+    >>> from fastdist import fastdist
+    >>> import numpy as np
+    >>> true, pred, w = np.random.RandomState(seed=0).rand(10000, 3).T
+    >>> fastdist.mean_squared_error(true, pred, w, squared=False)
+    0.40868712553956005
+    """
+    to_square = 1 if squared else 2
+    n = len(true)
+    w = init_w(w, n)
+    num, denom = 0, 0
+    for i in range(n):
+        num += abs(true[i] - pred[i]) ** 2 * w[i]
+        denom += w[i]
+    return (num / denom) ** (1 / to_square)
+
+
+@jit(nopython=True, fastmath=True)
+def mean_squared_log_error(true, pred, w=None):
+    """
+    :purpose:
+    Computes the mean squared log error between a predictions array and a target array
+
+    :params:
+    true, pred : input arrays, both of shape (n,)
+    w          : weights at each index of true and pred. array of shape (n,)
+                 if no w is set, it is initialized as an array of ones
+                 such that it will have no impact on the output
+
+    :returns:
+    mean_squared_log_error : float, the mean squared log error of the targets and predictions
+
+    :example:
+    >>> from fastdist import fastdist
+    >>> import numpy as np
+    >>> true, pred, w = np.random.RandomState(seed=0).rand(10000, 3).T
+    >>> fastdist.mean_squared_log_error(true, pred, w)
+    0.07840806721686663
+    """
+    n = len(true)
+    w = init_w(w, n)
+    num, denom = 0, 0
+    for i in range(n):
+        num += abs(math.log(true[i] + 1) - math.log(pred[i] + 1)) ** 2 * w[i]
+        denom += w[i]
+    return num / denom
+
+
+@jit(nopython=True, fastmath=True)
+def median_absolute_error(true, pred, w=None):
+    """
+    :purpose:
+    Computes the median absolute error between a predictions array and a target array
+
+    :params:
+    true, pred : input arrays, both of shape (n,)
+    w          : here, w does nothing. it is only here for consistency
+                 with the other functions
+
+    :returns:
+    median_absolute_error : float, the median absolute error of the targets and predictions
+
+    :example:
+    >>> from fastdist import fastdist
+    >>> import numpy as np
+    >>> true, pred, w = np.random.RandomState(seed=0).rand(10000, 3).T
+    >>> fastdist.median_absolute_error(true, pred, w)
+    0.2976962111211224
+    """
+    return np.median(np.abs(true - pred))
+
+
+@jit(nopython=True, fastmath=True)
+def confusion_matrix(targets, preds, w=None, normalize=None):
+    """
+    :purpose:
+    Creates a confusion matrix for an array of target and predicted classes
+    (used in most of the other classification metrics, along with having its own use)
+
+    :params:
+    targets, preds : discrete input arrays, both of shape (n,)
+    w              : weights at each index of true and pred. array of shape (n,)
+                     if no w is set, it is initialized as an array of ones
+                     such that it will have no impact on the output
+    normalize      : how to normalize (if at all) the confusion matrix. options are
+                     "true", which makes each row sum to 1, "pred", which makes columns
+                     sum to 1, and "all", which makes the entire matrix sum to 1
+
+    :returns:
+    confusion_matrix : a confusion matrix (np.array) of shape (n_classes, n_classes)
+
+    :example:
+    >>> from fastdist import fastdist
+    >>> import numpy as np
+    >>> true = np.random.RandomState(seed=0).randint(2, size=10000)
+    >>> pred = np.random.RandomState(seed=1).randint(2, size=10000)
+    >>> fastdist.confusion_matrix(true, pred)
+    array([[2412., 2503.],
+           [2594., 2491.]])
+    """
+    w = init_w(w, len(targets))
+    n = max(len(np.unique(targets)), len(np.unique(preds)))
+    cm = np.zeros((n, n))
+    for i in range(n):
+        for j in range(n):
+            correct = 0
+            for val in range(len(targets)):
+                if targets[val] == i and preds[val] == j:
+                    correct += w[val]
+            cm[i][j] = correct
+
+    if normalize is None:
+        return cm
+    elif normalize == 'true':
+        for i in range(n):
+            row_sum = 0
+            for j in range(n):
+                row_sum += cm[i][j]
+            cm[i] /= row_sum
+        return cm
+    elif normalize == 'pred':
+        for i in range(n):
+            col_sum = 0
+            for j in range(n):
+                col_sum += cm[j][i]
+            cm[:, i] /= col_sum
+        return cm
+    elif normalize == 'all':
+        total_sum = 0
+        for i in range(n):
+            for j in range(n):
+                total_sum += cm[i][j]
+        return cm / total_sum
+
+
+@jit(nopython=True, fastmath=True)
+def accuracy_score(targets, preds, w=None, normalize=True):
+    """
+    :purpose:
+    Calculates the accuracy score between a discrete target and pred array
+
+    :params:
+    targets, preds : discrete input arrays, both of shape (n,)
+    w              : weights at each index of true and pred. array of shape (n,)
+                     if no w is set, it is initialized as an array of ones
+                     such that it will have no impact on the output
+    normalize      : bool. if true, the function returns (correct / total),
+                     if false, the function returns (correct). defaults to true
+
+    :returns:
+    accuracy_score : float, the accuracy score of the targets and preds array
+
+    :example:
+    >>> from fastdist import fastdist
+    >>> import numpy as np
+    >>> true = np.random.RandomState(seed=0).randint(2, size=10000)
+    >>> pred = np.random.RandomState(seed=1).randint(2, size=10000)
+    >>> fastdist.accuracy_score(true, pred)
+    0.4903
+    """
+    w = init_w(w, len(targets))
+    num, denom = 0, 0
+    for i in range(len(targets)):
+        if targets[i] == preds[i]:
+            num += w[i]
+        denom += w[i]
+    return num / denom if normalize else num
+
+
+@jit(nopython=True, fastmath=True)
+def balanced_accuracy_score(targets, preds, w=None, adjusted=False):
+    """
+    :purpose:
+    Calculates the balanced accuracy score between a discrete target and pred array
+
+    :params:
+    targets, preds : discrete input arrays, both of shape (n,)
+    w              : weights at each index of true and pred. array of shape (n,)
+                     if no w is set, it is initialized as an array of ones
+                     such that it will have no impact on the output
+    adjusted       : bool. if true, adjust the output for chance (making 0 the worst
+                     and 1 the best score). defaults to false
+
+    :returns:
+    balanced_accuracy_score : float, the balanced accuracy score of the targets and preds array
+
+    :example:
+    >>> from fastdist import fastdist
+    >>> import numpy as np
+    >>> true = np.random.RandomState(seed=0).randint(2, size=10000)
+    >>> pred = np.random.RandomState(seed=1).randint(2, size=10000)
+    >>> fastdist.balanced_accuracy_score(true, pred)
+    0.49030739883826424
+    """
+    w = init_w(w, len(targets))
+    cm = confusion_matrix(targets, preds, w=w)
+    n = cm.shape[0]
+    diag, row_sums = np.zeros(n), np.zeros(n)
+    for i in range(n):
+        diag[i] = cm[i][i]
+        for j in range(n):
+            row_sums[i] += cm[i][j]
+
+    class_div = diag / row_sums
+    div_mean = 0
+    for i in range(n):
+        div_mean += class_div[i]
+    div_mean /= n
+
+    if adjusted:
+        div_mean -= 1 / n
+        div_mean /= 1 - 1 / n
+    return div_mean
+
+
+@jit(nopython=True, fastmath=True)
+def brier_score_loss(targets, probs, w=None):
+    """
+    :purpose:
+    Calculates the Brier score loss between an array of discrete targets and an array of probabilities
+
+    :params:
+    targets : discrete input array of shape (n,)
+    probs   : input array of predicted probabilities for sample of shape (n,)
+    w       : weights at each index of true and pred. array of shape (n,)
+              if no w is set, it is initialized as an array of ones
+              such that it will have no impact on the output
+
+    :returns:
+    brier_score_loss : float, the Brier score loss of the targets and probs array
+
+    :example:
+    >>> from fastdist import fastdist
+    >>> import numpy as np
+    >>> true = np.random.RandomState(seed=0).randint(2, size=10000)
+    >>> prob = np.random.RandomState(seed=0).uniform(size=10000)
+    >>> fastdist.brier_score_loss(true, prob)
+    0.5097
+    """
+    w = init_w(w, len(targets))
+    num, denom = 0, 0
+    for i in range(len(targets)):
+        num += (probs[i] - targets[i]) ** 2 * w[i]
+        denom += w[i]
+    return num / denom
