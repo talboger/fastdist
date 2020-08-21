@@ -1413,3 +1413,226 @@ def brier_score_loss(targets, probs, w=None):
         num += (probs[i] - targets[i]) ** 2 * w[i]
         denom += w[i]
     return num / denom
+
+
+@jit(nopython=True, fastmath=True)
+def precision_score(targets, preds, w=None, average='binary'):
+    """
+    :purpose:
+    Calculates the precision score between a discrete target and pred array
+
+    :params:
+    targets, preds : discrete input arrays, both of shape (n,)
+    w              : weights at each index of true and pred. array of shape (n,)
+                     if no w is set, it is initialized as an array of ones
+                     such that it will have no impact on the output
+    average        : str, either "micro", "macro", "none", or "binary".
+                     if "micro", computes precision globally
+                     if "macro", take the mean of precision for each class (unweighted)
+                     if "none", return a list of the precision for each class
+                     if "binary", return precision in a binary classification problem
+                     defaults to "binary", so for multi-class problems, you must change this
+
+    :returns:
+    precision_score : np.array, the precision score of the targets and preds array
+
+    :example:
+    >>> from fastdist import fastdist
+    >>> import numpy as np
+    >>> true = np.random.RandomState(seed=0).randint(2, size=10000)
+    >>> pred = np.random.RandomState(seed=1).randint(2, size=10000)
+    >>> fastdist.precision_score(true, pred)
+    array([0.49879856])
+    """
+    w = init_w(w, len(targets))
+    if average == 'micro':
+        cm = confusion_matrix(targets, preds, w=w)
+        n = cm.shape[0]
+
+        diag, row_sums = np.zeros(n), np.zeros(n)
+        for i in range(n):
+            diag[i] = cm[i][i]
+            for j in range(n):
+                row_sums += cm[i][j]
+        class_div = diag / row_sums
+        div_mean = 0
+        for i in range(n):
+            div_mean += class_div[i]
+        return np.array([div_mean])
+
+    elif average == 'macro':
+        cm = confusion_matrix(targets, preds, w=w, normalize='pred')
+        n = cm.shape[0]
+
+        diag, row_sums = np.zeros(n), np.zeros(n)
+        for i in range(n):
+            diag[i] = cm[i][i]
+            for j in range(n):
+                row_sums += cm[i][j]
+        class_div = diag / row_sums * n
+        class_mean = 0
+        for i in range(n):
+            class_mean += class_div[i]
+        return np.array([class_mean / n])
+
+    elif average == 'none':
+        cm = confusion_matrix(targets, preds, w=w, normalize='pred')
+        n = cm.shape[0]
+
+        diag, row_sums = np.zeros(n), np.zeros(n)
+        for i in range(n):
+            diag[i] = cm[i][i]
+            for j in range(n):
+                row_sums += cm[i][j]
+        class_div = diag / row_sums * n
+        return class_div
+
+    elif average == 'binary':
+        cm = confusion_matrix(targets, preds, w=w)
+        return np.array([cm[1][1] / (cm[1][1] + cm[0][1])])
+
+
+@jit(nopython=True, fastmath=True)
+def recall_score(targets, preds, w=None, average='binary'):
+    """
+    :purpose:
+    Calculates the recall score between a discrete target and pred array
+
+    :params:
+    targets, preds : discrete input arrays, both of shape (n,)
+    w              : weights at each index of true and pred. array of shape (n,)
+                     if no w is set, it is initialized as an array of ones
+                     such that it will have no impact on the output
+    average        : str, either "micro", "macro", "none", or "binary".
+                     if "micro", computes recall globally
+                     if "macro", take the mean of recall for each class (unweighted)
+                     if "none", return a list of the recall for each class
+                     if "binary", return recall in a binary classification problem
+                     defaults to "binary", so for multi-class problems, you must change this
+
+    :returns:
+    recall_score : np.array, the recall score of the targets and preds array
+
+    :example:
+    >>> from fastdist import fastdist
+    >>> import numpy as np
+    >>> true = np.random.RandomState(seed=0).randint(2, size=10000)
+    >>> pred = np.random.RandomState(seed=1).randint(2, size=10000)
+    >>> fastdist.recall_score(true, pred)
+    array([0.48987217])
+    """
+    w = init_w(w, len(targets))
+    if average == 'micro':
+        cm = confusion_matrix(targets, preds, w=w)
+        n = cm.shape[0]
+
+        diag, row_sums = np.zeros(n), np.zeros(n)
+        for i in range(n):
+            diag[i] = cm[i][i]
+            for j in range(n):
+                row_sums += cm[i][j]
+        class_div = diag / row_sums
+        div_mean = 0
+        for i in range(n):
+            div_mean += class_div[i]
+        return np.array([div_mean])
+
+    elif average == 'macro':
+        cm = confusion_matrix(targets, preds, w=w, normalize='true')
+        n = cm.shape[0]
+
+        diag, row_sums = np.zeros(n), np.zeros(n)
+        for i in range(n):
+            diag[i] = cm[i][i]
+            for j in range(n):
+                row_sums += cm[i][j]
+        class_div = diag / row_sums * n
+        class_mean = 0
+        for i in range(n):
+            class_mean += class_div[i]
+        return np.array([class_mean / n])
+
+    elif average == 'none':
+        cm = confusion_matrix(targets, preds, w=w, normalize='true')
+        n = cm.shape[0]
+
+        diag, row_sums = np.zeros(n), np.zeros(n)
+        for i in range(n):
+            diag[i] = cm[i][i]
+            for j in range(n):
+                row_sums += cm[i][j]
+        class_div = diag / row_sums * n
+        return class_div
+
+    elif average == 'binary':
+        cm = confusion_matrix(targets, preds, w=w)
+        return np.array([cm[1][1] / (cm[1][1] + cm[1][0])])
+
+@jit(nopython=True, fastmath=True)
+def f1_score(targets, preds, w=None, average='binary'):
+    """
+    :purpose:
+    Calculates the F1 score between a discrete target and pred array
+
+    :params:
+    targets, preds : discrete input arrays, both of shape (n,)
+    w              : weights at each index of true and pred. array of shape (n,)
+                     if no w is set, it is initialized as an array of ones
+                     such that it will have no impact on the output
+    average        : str, either "micro", "macro", "none", or "binary".
+                     if "micro", computes F1 globally
+                     if "macro", take the mean of F1 for each class (unweighted)
+                     if "none", return a list of the F1 for each class
+                     if "binary", return F1 in a binary classification problem
+                     defaults to "binary", so for multi-class problems, you must change this
+
+    :returns:
+    f1_score : np.array, the F1 score of the targets and preds array
+
+    :example:
+    >>> from fastdist import fastdist
+    >>> import numpy as np
+    >>> true = np.random.RandomState(seed=0).randint(2, size=10000)
+    >>> pred = np.random.RandomState(seed=1).randint(2, size=10000)
+    >>> fastdist.f1_score(true, pred)
+    array([0.49429507])
+    """
+    w = init_w(w, len(targets))
+    precision = precision_score(targets, preds, w, average)
+    recall = recall_score(targets, preds, w, average)
+    return np.array([2]) * precision * recall / (precision + recall)
+
+
+@jit(nopython=True, fastmath=True)
+def log_loss(targets, probs, w=None):
+    """
+    :purpose:
+    Calculates the log loss between an array of discrete targets and an array of probabilities
+
+    :params:
+    targets : discrete input array of shape (n,)
+    probs   : input array of predicted probabilities for sample of shape (n,)
+    w       : weights at each index of true and pred. array of shape (n,)
+              if no w is set, it is initialized as an array of ones
+              such that it will have no impact on the output
+
+    :returns:
+    log_loss : float, the log loss score of the targets and probs array
+
+    :example:
+    >>> from fastdist import fastdist
+    >>> import numpy as np
+    >>> true = np.random.RandomState(seed=0).randint(2, size=10000)
+    >>> prob = np.random.RandomState(seed=0).uniform(size=10000)
+    >>> fastdist.log_loss(true, prob)
+    1.0023371622966895
+    """
+    w = init_w(w, len(targets))
+    num, denom = 0, 0
+    for i in range(len(targets)):
+        if targets[i] == 1:
+            num += -math.log(probs[i]) * w[i]
+        else:
+            num += -math.log(1 - probs[i]) * w[i]
+        denom += w[i]
+    return num / denom
