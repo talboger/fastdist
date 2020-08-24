@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="fastdist",
-    version="1.0.0",
+    version="1.1.0",
     author="tal boger",
     author_email="tboger10@gmail.com",
     description="Faster distance calculations in python using numba",
