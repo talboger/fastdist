@@ -2,6 +2,10 @@
 
 fastdist is a replacement for scipy.spatial.distance that shows significant speed improvements by using numba and some optimization
 
+Newer versions of fastdist (> 1.0.0) also add partial implementations of sklearn.metrics which also show significant speed improvements.
+
+Along with adding several sklearn.metrics functions, fastdist 1.1.0 fixes an error in the Chebyshev distance calculation and adds slight speed optimizations.
+
 ## Installation
 
 Use the package manager [pip](https://pip.pypa.io/en/stable/) to install fastdist.
@@ -26,7 +30,21 @@ v = np.random.rand(100)
 fastdist.euclidean(u, v)
 ```
 
-For calculating distances involving matrices, fastdist has a few different functions.
+The same is true for most sklearn.metrics functions, though not all functions in sklearn.metrics are implemented in fastdist.
+Notably, most of the ROC-based functions are not (yet) available in fastdist. However, the other functions are the same as sklearn.metrics.
+So, for example, to create a confusion matrix from two discrete vectors, run:
+
+```python
+from fastdist import fastdist
+import numpy as np
+
+y_true = np.random.randint(10, size=10000)
+y_pred = np.random.randint(10, size=10000)
+
+fastdist.confusion_matrix(y_true, y_pred)
+```
+
+For calculating distances involving matrices, fastdist has a few different functions instead of scipy's cdist and pdist.
 
 To calculate the distance between a vector and each row of a matrix, use `vector_to_matrix_distance`:
 
@@ -69,9 +87,7 @@ fastdist.matrix_pairwise_distance(a, fastdist.euclidean, "euclidean", return_mat
 
 ## Speed
 
-fastdist is significantly faster than scipy.spatial.distance in most cases. It also returns the exact
-same values as scipy.spatial.distance (with the exception of some floating point differences), meaning
-the calculations are set up correctly.
+fastdist is significantly faster than scipy.spatial.distance in most cases.
 
 Though almost all functions will show a speed improvement in fastdist, certain functions will have
 an especially large improvement. Notably, cosine similarity is much faster, as are the vector/matrix,
@@ -130,3 +146,22 @@ a = np.random.rand(200, 1000)
 %timeit distance.pdist(a, "euclidean")
 # 26.9 ms ± 1.27 ms per loop (mean ± std. dev. of 7 runs, 10 loops each)
 ```
+
+fastdist's implementation of the functions in sklearn.metrics are also significantly faster. For example:
+
+```python
+from fastdist import fastdist
+import numpy as np
+from sklearn import metrics
+
+y_true = np.random.randint(2, size=100000)
+y_pred = np.random.randint(2, size=100000)
+
+%timeit fastdist.accuracy_score(y_true, y_pred)
+# 74 µs ± 5.81 µs per loop (mean ± std. dev. of 7 runs, 100 loops each)
+
+%timeit metrics.accuracy_score(y_true, y_pred)
+# 7.23 ms ± 157 µs per loop (mean ± std. dev. of 7 runs, 100 loops each)
+```
+
+Here, fastdist is about 97x faster than sklearn's implementation.
