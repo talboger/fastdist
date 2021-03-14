@@ -1338,13 +1338,15 @@ def accuracy_score(targets, preds, w=None, normalize=True):
 
 
 @jit(nopython=True, fastmath=True)
-def balanced_accuracy_score(targets, preds, w=None, adjusted=False):
+def balanced_accuracy_score(targets, preds, cm=None, w=None, adjusted=False):
     """
     :purpose:
     Calculates the balanced accuracy score between a discrete target and pred array
 
     :params:
     targets, preds : discrete input arrays, both of shape (n,)
+    cm             : if you have previously calculated a confusion matrix, pass it here to save the computation.
+                     set as None, which makes the function calculate the confusion matrix
     w              : weights at each index of true and pred. array of shape (n,)
                      if no w is set, it is initialized as an array of ones
                      such that it will have no impact on the output
@@ -1363,7 +1365,8 @@ def balanced_accuracy_score(targets, preds, w=None, adjusted=False):
     0.49030739883826424
     """
     w = init_w(w, len(targets))
-    cm = confusion_matrix(targets, preds, w=w)
+    if cm is None:
+        cm = confusion_matrix(targets, preds, w=w)
     n = cm.shape[0]
     diag, row_sums = np.zeros(n), np.zeros(n)
     for i in range(n):
@@ -1416,13 +1419,18 @@ def brier_score_loss(targets, probs, w=None):
 
 
 @jit(nopython=True, fastmath=True)
-def precision_score(targets, preds, w=None, average='binary'):
+def precision_score(targets, preds, cm=None, w=None, average='binary'):
     """
     :purpose:
     Calculates the precision score between a discrete target and pred array
 
     :params:
     targets, preds : discrete input arrays, both of shape (n,)
+    cm             : if you have previously calculated a confusion matrix, pass it here to save the computation.
+                     set as None, which makes the function calculate the confusion matrix.
+                     note that for your specific average (i.e., micro, macro, none, or binary), you must compute the confusion
+                     matrix correctly corresponding to the one you would like to use. so, for "macro" or "none", the cm
+                     must be computed with normalize="pred"
     w              : weights at each index of true and pred. array of shape (n,)
                      if no w is set, it is initialized as an array of ones
                      such that it will have no impact on the output
@@ -1446,7 +1454,8 @@ def precision_score(targets, preds, w=None, average='binary'):
     """
     w = init_w(w, len(targets))
     if average == 'micro':
-        cm = confusion_matrix(targets, preds, w=w)
+        if cm is None:
+            cm = confusion_matrix(targets, preds, w=w)
         n = cm.shape[0]
 
         diag, row_sums = np.zeros(n), np.zeros(n)
@@ -1455,13 +1464,14 @@ def precision_score(targets, preds, w=None, average='binary'):
             for j in range(n):
                 row_sums += cm[i][j]
         class_div = diag / row_sums
-        div_mean = 0
+        div_mean = 0.
         for i in range(n):
             div_mean += class_div[i]
         return np.array([div_mean])
 
     elif average == 'macro':
-        cm = confusion_matrix(targets, preds, w=w, normalize='pred')
+        if cm is None:
+            cm = confusion_matrix(targets, preds, w=w, normalize='pred')
         n = cm.shape[0]
 
         diag, row_sums = np.zeros(n), np.zeros(n)
@@ -1476,7 +1486,8 @@ def precision_score(targets, preds, w=None, average='binary'):
         return np.array([class_mean / n])
 
     elif average == 'none':
-        cm = confusion_matrix(targets, preds, w=w, normalize='pred')
+        if cm is None:
+            cm = confusion_matrix(targets, preds, w=w, normalize='pred')
         n = cm.shape[0]
 
         diag, row_sums = np.zeros(n), np.zeros(n)
@@ -1488,18 +1499,24 @@ def precision_score(targets, preds, w=None, average='binary'):
         return class_div
 
     elif average == 'binary':
-        cm = confusion_matrix(targets, preds, w=w)
+        if cm is None:
+            cm = confusion_matrix(targets, preds, w=w)
         return np.array([cm[1][1] / (cm[1][1] + cm[0][1])])
 
 
 @jit(nopython=True, fastmath=True)
-def recall_score(targets, preds, w=None, average='binary'):
+def recall_score(targets, preds, cm=None, w=None, average='binary'):
     """
     :purpose:
     Calculates the recall score between a discrete target and pred array
 
     :params:
     targets, preds : discrete input arrays, both of shape (n,)
+    cm             : if you have previously calculated a confusion matrix, pass it here to save the computation.
+                     set as None, which makes the function calculate the confusion matrix.
+                     note that for your specific average (i.e., micro, macro, none, or binary), you must compute the confusion
+                     matrix correctly corresponding to the one you would like to use. so, for "macro" or "none", the cm
+                     must be computed with normalize="true"
     w              : weights at each index of true and pred. array of shape (n,)
                      if no w is set, it is initialized as an array of ones
                      such that it will have no impact on the output
@@ -1523,7 +1540,8 @@ def recall_score(targets, preds, w=None, average='binary'):
     """
     w = init_w(w, len(targets))
     if average == 'micro':
-        cm = confusion_matrix(targets, preds, w=w)
+        if cm is None:
+            cm = confusion_matrix(targets, preds, w=w)
         n = cm.shape[0]
 
         diag, row_sums = np.zeros(n), np.zeros(n)
@@ -1532,13 +1550,14 @@ def recall_score(targets, preds, w=None, average='binary'):
             for j in range(n):
                 row_sums += cm[i][j]
         class_div = diag / row_sums
-        div_mean = 0
+        div_mean = 0.
         for i in range(n):
             div_mean += class_div[i]
         return np.array([div_mean])
 
     elif average == 'macro':
-        cm = confusion_matrix(targets, preds, w=w, normalize='true')
+        if cm is None:
+            cm = confusion_matrix(targets, preds, w=w, normalize='true')
         n = cm.shape[0]
 
         diag, row_sums = np.zeros(n), np.zeros(n)
@@ -1553,7 +1572,8 @@ def recall_score(targets, preds, w=None, average='binary'):
         return np.array([class_mean / n])
 
     elif average == 'none':
-        cm = confusion_matrix(targets, preds, w=w, normalize='true')
+        if cm is None:
+            cm = confusion_matrix(targets, preds, w=w, normalize='true')
         n = cm.shape[0]
 
         diag, row_sums = np.zeros(n), np.zeros(n)
@@ -1565,7 +1585,8 @@ def recall_score(targets, preds, w=None, average='binary'):
         return class_div
 
     elif average == 'binary':
-        cm = confusion_matrix(targets, preds, w=w)
+        if cm is None:
+            cm = confusion_matrix(targets, preds, w=w)
         return np.array([cm[1][1] / (cm[1][1] + cm[1][0])])
 
 @jit(nopython=True, fastmath=True)
