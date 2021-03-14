@@ -4,7 +4,10 @@ fastdist is a replacement for scipy.spatial.distance that shows significant spee
 
 Newer versions of fastdist (> 1.0.0) also add partial implementations of sklearn.metrics which also show significant speed improvements.
 
-Along with adding several sklearn.metrics functions, fastdist 1.1.0 fixes an error in the Chebyshev distance calculation and adds slight speed optimizations.
+What's new in each version:
+
+- 1.1.0: adds implementation of several sklearn.metrics functions, fixes an error in the Chebyshev distance calculation and adds slight speed optimizations.
+- 1.1.1: large speed optimizations for confusion matrix-based metrics (see more about this in the "1.1.1 speed improvements" section), fix precision and recall scores
 
 ## Installation
 
@@ -165,3 +168,64 @@ y_pred = np.random.randint(2, size=100000)
 ```
 
 Here, fastdist is about 97x faster than sklearn's implementation.
+
+#### 1.1.1 speed improvements
+
+fastdist v1.1.1 adds significant speed improvements to confusion matrix-based metrics functions (balanced accuracy score, precision, and recall).
+These speed improvements are possible by not recalculating the confusion matrix each time, as sklearn.metrics does.
+
+In older versions of fastdist (<v1.1.1), we also recalculate the confusion matrix each time, giving us the following speed:
+
+```python
+from fastdist import fastdist
+import numpy as np
+from sklearn import metrics
+
+y_true = np.random.randint(2, size=10000)
+y_pred = np.random.randint(2, size=10000)
+
+%timeit fastdist.balanced_accuracy_score(y_true, y_pred)
+# 1.39 ms ± 66.6 µs per loop (mean ± std. dev. of 7 runs, 100 loops each)
+
+%timeit metrics.balanced_accuracy_score(y_true, y_pred)
+# 11.3 ms ± 185 µs per loop (mean ± std. dev. of 7 runs, 100 loops each)
+```
+
+Here, fastdist is about 8x faster than sklearn.metrics.
+ 
+However, now let's say that we need to compute confusion matrices and then also want to compute balanced accuracy:
+
+```python
+from fastdist import fastdist
+import numpy as np
+from sklearn import metrics
+
+y_true = np.random.randint(2, size=10000)
+y_pred = np.random.randint(2, size=00000)
+
+%timeit fastdist.confusion_matrix(y_true, y_pred)
+# 1.45 ms ± 55.1 µs per loop (mean ± std. dev. of 7 runs, 100 loops each)
+
+%timeit metrics.confusion_matrix(y_true, y_pred)
+# 11.8 ms ± 499 µs per loop (mean ± std. dev. of 7 runs, 100 loops each)
+```
+
+The confusion matrix computation by itself is about 8x faster with fastdist. But the larger speed improvement will come now that we don't need to
+recompute the confusion matrix to calculate balanced accuracy:
+
+```python
+from fastdist import fastdist
+import numpy as np
+from sklearn import metrics
+
+y_true = np.random.randint(2, size=10000)
+y_pred = np.random.randint(2, size=10000)
+
+%timeit fastdist.balanced_accuracy_score(y_true, y_pred, cm)
+# 11.7 µs ± 2.12 µs per loop (mean ± std. dev. of 7 runs, 100 loops each)
+
+%timeit metrics.balanced_accuracy_score(y_true, y_pred)
+# 9.81 ms ± 1.08 ms per loop (mean ± std. dev. of 7 runs, 100 loops each)
+```
+
+Saving the confusion matrix computation here makes fastdist's balanced accuracy score 838x faster than sklearn's. 
