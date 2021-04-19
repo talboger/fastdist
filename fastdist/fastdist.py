@@ -330,7 +330,7 @@ def cosine_pairwise_distance(a, return_matrix=False):
         for i in range(n):
             for j in range(i):
                 out_mat[i][j] = np.dot(a[i], a[j])
-        out_mat += out_mat.T
+        out_mat = out_mat + out_mat.T
         np.fill_diagonal(out_mat,1) 
         return out_mat
     else:
