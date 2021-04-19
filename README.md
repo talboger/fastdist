@@ -8,6 +8,7 @@ What's new in each version:
 
 - 1.1.0: adds implementation of several sklearn.metrics functions, fixes an error in the Chebyshev distance calculation and adds slight speed optimizations.
 - 1.1.1: large speed optimizations for confusion matrix-based metrics (see more about this in the "1.1.1 speed improvements" section), fix precision and recall scores
+- 1.1.2: speed improvement and bug fig for `cosine_pairwise_distance`
 
 ## Installation
 
