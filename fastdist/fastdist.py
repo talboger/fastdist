@@ -1592,7 +1592,7 @@ def recall_score(targets, preds, cm=None, w=None, average='binary'):
         return np.array([cm[1][1] / (cm[1][1] + cm[1][0])])
 
 @jit(nopython=True, fastmath=True)
-def f1_score(targets, preds, w=None, average='binary'):
+def f1_score(targets, preds, cm=None, w=None, average='binary'):
     """
     :purpose:
     Calculates the F1 score between a discrete target and pred array
@@ -1621,8 +1621,8 @@ def f1_score(targets, preds, w=None, average='binary'):
     array([0.49429507])
     """
     w = init_w(w, len(targets))
-    precision = precision_score(targets, preds, w, average)
-    recall = recall_score(targets, preds, w, average)
+    precision = precision_score(targets, preds, cm=cm, w=w, average=average)
+    recall = recall_score(targets, preds, cm=cm, w=w, average=average)
     return np.array([2]) * precision * recall / (precision + recall)
 
 
