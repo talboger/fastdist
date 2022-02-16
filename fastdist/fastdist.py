@@ -1306,13 +1306,15 @@ def confusion_matrix(targets, preds, w=None, normalize=None):
 
 
 @jit(nopython=True, fastmath=True)
-def accuracy_score(targets, preds, w=None, normalize=True):
+def accuracy_score(targets, preds, cm=None, w=None, normalize=True):
     """
     :purpose:
     Calculates the accuracy score between a discrete target and pred array
 
     :params:
     targets, preds : discrete input arrays, both of shape (n,)
+    cm             : if you have previously calculated a confusion matrix, pass it here to save the computation.
+                     set as None, which makes the function calculate the confusion matrix
     w              : weights at each index of true and pred. array of shape (n,)
                      if no w is set, it is initialized as an array of ones
                      such that it will have no impact on the output
@@ -1331,11 +1333,16 @@ def accuracy_score(targets, preds, w=None, normalize=True):
     0.4903
     """
     w = init_w(w, len(targets))
+    if cm is None:
+        cm = confusion_matrix(targets, preds, w=w)
+    n = cm.shape[0]
+
     num, denom = 0, 0
-    for i in range(len(targets)):
-        if targets[i] == preds[i]:
-            num += w[i]
-        denom += w[i]
+    for i in range(n):
+        num += cm[i][i]
+        for j in range(n):
+            denom += cm[i][j]
+
     return num / denom if normalize else num
 
 
