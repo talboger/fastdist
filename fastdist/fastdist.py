@@ -1469,7 +1469,7 @@ def mean_iou(targets, preds, cm=None, w=None, adjusted=False):
     >>> import numpy as np
     >>> true = np.random.RandomState(seed=0).randint(2, size=10000)
     >>> pred = np.random.RandomState(seed=1).randint(2, size=10000)
-    >>> fastdist.mean_predictive_value(true, pred)
+    >>> fastdist.mean_iou(true, pred)
     0.49030739883826424
 
     by saskra
