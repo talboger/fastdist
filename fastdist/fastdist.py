@@ -1339,9 +1339,9 @@ def accuracy_score(targets, preds, cm=None, w=None, normalize=True):
 
     num, denom = 0, 0
     for i in range(n):
-        num += cm[i][i]
+        num += cm[i][i]  # sum of the diagonal = true results
         for j in range(n):
-            denom += cm[i][j]
+            denom += cm[i][j]  # total sum = true and false results
 
     return num / denom if normalize else num
 
@@ -1379,15 +1379,119 @@ def balanced_accuracy_score(targets, preds, cm=None, w=None, adjusted=False):
     n = cm.shape[0]
     diag, row_sums = np.zeros(n), np.zeros(n)
     for i in range(n):
-        diag[i] = cm[i][i]
+        diag[i] = cm[i][i]  # sum of the diagonal = true results
         for j in range(n):
-            row_sums[i] += cm[i][j]
+            row_sums[i] += cm[i][j]  # sums of the rows = original ground truth class assignments
 
-    class_div = diag / row_sums
+    class_div = diag / row_sums  # fraction of correctly recovered targets per class
     div_mean = 0
     for i in range(n):
         div_mean += class_div[i]
-    div_mean /= n
+    div_mean /= n  # mean fraction of correctly recovered targets
+
+    if adjusted:
+        div_mean -= 1 / n
+        div_mean /= 1 - 1 / n
+    return div_mean
+
+
+@jit(nopython=True, fastmath=True)
+def mean_predictive_value(targets, preds, cm=None, w=None, adjusted=False):
+    """
+    :purpose:
+    Calculates the mean predictive value between a discrete target and pred array
+
+    :params:
+    targets, preds : discrete input arrays, both of shape (n,)
+    cm             : if you have previously calculated a confusion matrix, pass it here to save the computation.
+                     set as None, which makes the function calculate the confusion matrix
+    w              : weights at each index of true and pred. array of shape (n,)
+                     if no w is set, it is initialized as an array of ones
+                     such that it will have no impact on the output
+    adjusted       : bool. if true, adjust the output for chance (making 0 the worst
+                     and 1 the best score). defaults to false
+
+    :returns:
+    mean_predictive_value : float, the mean predictive value of the targets and preds array
+
+    :example:
+    >>> from fastdist import fastdist
+    >>> import numpy as np
+    >>> true = np.random.RandomState(seed=0).randint(2, size=10000)
+    >>> pred = np.random.RandomState(seed=1).randint(2, size=10000)
+    >>> fastdist.mean_predictive_value(true, pred)
+    0.49030739883826424
+
+    by saskra
+    """
+    w = init_w(w, len(targets))
+    if cm is None:
+        cm = confusion_matrix(targets, preds, w=w)
+    n = cm.shape[0]
+    diag, columns_sums = np.zeros(n), np.zeros(n)
+    for i in range(n):
+        diag[i] = cm[i][i]  # sum of the diagonal = true results
+        for j in range(n):
+            columns_sums[j] += cm[i][j]  # sums of the columns = predictions per class
+
+    class_div = diag / columns_sums  # fraction of true results among the predicted ones per class
+    div_mean = 0
+    for i in range(n):
+        div_mean += class_div[i]
+    div_mean /= n  # mean fraction of true results among the predicted ones
+
+    if adjusted:
+        div_mean -= 1 / n
+        div_mean /= 1 - 1 / n
+    return div_mean
+
+
+@jit(nopython=True, fastmath=True)
+def mean_iou(targets, preds, cm=None, w=None, adjusted=False):
+    """
+    :purpose: Calculates the mean intersection of ground truth and prediction over union
+
+    :params:
+    targets, preds : discrete input arrays, both of shape (n,)
+    cm             : if you have previously calculated a confusion matrix, pass it here to save the computation.
+                     set as None, which makes the function calculate the confusion matrix
+    w              : weights at each index of true and pred. array of shape (n,)
+                     if no w is set, it is initialized as an array of ones
+                     such that it will have no impact on the output
+    adjusted       : bool. if true, adjust the output for chance (making 0 the worst
+                     and 1 the best score). defaults to false
+
+    :returns:
+    mean_iou : float, the mean intersection over union of the targets and preds array
+
+    :example:
+    >>> from fastdist import fastdist
+    >>> import numpy as np
+    >>> true = np.random.RandomState(seed=0).randint(2, size=10000)
+    >>> pred = np.random.RandomState(seed=1).randint(2, size=10000)
+    >>> fastdist.mean_predictive_value(true, pred)
+    0.49030739883826424
+
+    by saskra
+    """
+    w = init_w(w, len(targets))
+    if cm is None:
+        cm = confusion_matrix(targets, preds, w=w)
+    n = cm.shape[0]
+    diag, rows_sums, columns_sums = np.zeros(n), np.zeros(n), np.zeros(n)
+    for i in range(n):
+        for j in range(n):
+            if i == j:
+                diag[i] = cm[i][j]  # sum of the diagonal = true results
+            else:
+                rows_sums[i] += cm[i][j]  # rest of the row = false negative results
+                columns_sums[j] += cm[i][j]  # rest of the column = false positive results
+
+    class_div = diag / (columns_sums + rows_sums + diag)  # intersection over union (Jaccard) per class
+    div_mean = 0
+    for i in range(n):
+        div_mean += class_div[i]
+    div_mean /= n  # mean intersection over union
 
     if adjusted:
         div_mean -= 1 / n
