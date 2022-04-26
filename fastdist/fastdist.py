@@ -3,6 +3,10 @@ import numpy as np
 import math
 
 
+#############################
+#    Auxiliary functions    #
+#############################
+
 @jit(nopython=True, fastmath=True)
 def init_w(w, n):
     """
@@ -26,14 +30,22 @@ def init_w(w, n):
         return w
 
 
+############################
+#    Distance functions    #
+############################
+
+
 @jit(nopython=True, fastmath=True)
-def braycurtis(u, v, w=None):
+def braycurtis(u, v, param=None, w=None):
     """
     :purpose:
     Computes the Bray-Curtis distance between two 1D arrays
 
     :params:
     u, v   : input arrays, both of shape (n,)
+    param  : placeholder parameter providing interconvertibility of
+             distance functions while using matrix- and vector-
+             related functions
     w      : weights at each index of u and v. array of shape (n,)
              if no w is set, it is initialized as an array of ones
              such that it will have no impact on the output
@@ -58,13 +70,16 @@ def braycurtis(u, v, w=None):
 
 
 @jit(nopython=True, fastmath=True)
-def canberra(u, v, w=None):
+def canberra(u, v, param=None, w=None):
     """
     :purpose:
     Computes the Canberra distance between two 1D arrays
 
     :params:
     u, v   : input arrays, both of shape (n,)
+    param  : placeholder parameter providing interconvertibility of
+             distance functions while using matrix- and vector-
+             related functions
     w      : weights at each index of u and v. array of shape (n,)
              if no w is set, it is initialized as an array of ones
              such that it will have no impact on the output
@@ -90,13 +105,16 @@ def canberra(u, v, w=None):
 
 
 @jit(nopython=True, fastmath=True)
-def chebyshev(u, v, w=None):
+def chebyshev(u, v, param=None, w=None):
     """
     :purpose:
     Computes the Chebyshev distance between two 1D arrays
 
     :params:
     u, v   : input arrays, both of shape (n,)
+    param  : placeholder parameter providing interconvertibility of
+             distance functions while using matrix- and vector-
+             related functions
     w      : here, w does nothing. it is only here for consistency
              with the other functions
 
@@ -114,13 +132,16 @@ def chebyshev(u, v, w=None):
 
 
 @jit(nopython=True, fastmath=True)
-def cityblock(u, v, w=None):
+def cityblock(u, v, param=None, w=None):
     """
     :purpose:
     Computes the City Block distance between two 1D arrays
 
     :params:
     u, v   : input arrays, both of shape (n,)
+    param  : placeholder parameter providing interconvertibility of
+             distance functions while using matrix- and vector-
+             related functions
     w      : weights at each index of u and v. array of shape (n,)
              if no w is set, it is initialized as an array of ones
              such that it will have no impact on the output
@@ -144,13 +165,210 @@ def cityblock(u, v, w=None):
 
 
 @jit(nopython=True, fastmath=True)
-def correlation(u, v, w=None, centered=True):
+def euclidean(u, v, param=None, w=None):
+    """
+    :purpose:
+    Computes the Euclidean distance between two 1D arrays
+
+    :params:
+    u, v   : input arrays, both of shape (n,)
+    param  : placeholder parameter providing interconvertibility of
+             distance functions while using matrix- and vector-
+             related functions
+    w      : weights at each index of u and v. array of shape (n,)
+             if no w is set, it is initialized as an array of ones
+             such that it will have no impact on the output
+
+    :returns:
+    euclidean : float, the Euclidean distance between u and v
+
+    :example:
+    >>> from fastdist import fastdist
+    >>> import numpy as np
+    >>> u, v, w = np.random.RandomState(seed=0).rand(10000, 3).T
+    >>> fastdist.euclidean(u, v, w)
+    28.822558591834163
+    """
+    n = len(u)
+    w = init_w(w, n)
+    dist = 0
+    for i in range(n):
+        dist += abs(u[i] - v[i]) ** 2 * w[i]
+    return dist ** (1 / 2)
+
+
+@jit(nopython=True, fastmath=True)
+def mahalanobis(u, v, VI, w=None):
+    """
+    :purpose:
+    Computes the Mahalanobis distance between two 1D arrays
+
+    :params:
+    u, v   : input arrays, both of shape (n,)
+    VI     : the inverse of the covariance matrix of u and v
+             note that some arrays will result in a VI containing
+             very high values, leading to some imprecision
+    w  : placeholder parameter providing interconvertibility of
+             distance functions while using matrix- and vector-
+             related functions
+
+    :returns:
+    mahalanobis : float, the Mahalanobis distance between u and v
+    :example:
+    >>> from fastdist import fastdist
+    >>> import numpy as np
+    >>> u, v = np.array([2, 0, 0]).astype(np.float64), np.array([0, 1, 0]).astype(np.float64)
+    >>> VI = np.array([[1, 0.5, 0.5], [0.5, 1, 0.5], [0.5, 0.5, 1]])
+    >>> fastdist.mahalanobis(u, v, VI)
+    1.7320508075688772
+    """
+    delta = (u - v)
+    return np.dot(np.dot(delta, VI), delta) ** (1 / 2)
+
+
+@jit(nopython=True, fastmath=True)
+def minkowski(u, v, p, w=None):
+    """
+    :purpose:
+    Computes the Minkowski distance between two 1D arrays
+
+    :params:
+    u, v   : input arrays, both of shape (n,)
+    p      : the order of the norm (p=2 is the same as Euclidean)
+    w      : weights at each index of u and v. array of shape (n,)
+             if no w is set, it is initialized as an array of ones
+            such that it will have no impact on the output
+
+    :returns:
+    minkowski : float, the Minkowski distance between u and v
+
+    :example:
+    >>> from fastdist import fastdist
+    >>> import numpy as np
+    >>> u, v, w = np.random.RandomState(seed=0).rand(10000, 3).T
+    >>> p = 3
+    >>> fastdist.minkowski(u, v, p, w)
+    7.904971256091215
+    """
+    n = len(u)
+    w = init_w(w, n)
+    dist = 0
+    for i in range(n):
+        dist += abs(u[i] - v[i]) ** p * w[i]
+    return dist ** (1 / p)
+
+
+@jit(nopython=True, fastmath=True)
+def seuclidean(u, v, V, w=None):
+    """
+    :purpose:
+    Computes the standardized Euclidean distance between two 1D arrays
+
+    :params:
+    u, v   : input arrays, both of shape (n,)
+    V      : array of shape (n,) containing component variances
+    w      : placeholder parameter providing interconvertibility of
+             distance functions while using matrix- and vector-
+             related functions
+
+    :returns:
+    seuclidean : float, the standardized Euclidean distance between u and v
+
+    :example:
+    >>> from fastdist import fastdist
+    >>> import numpy as np
+    >>> u, v, V = np.random.RandomState(seed=0).rand(10000, 3).T
+    >>> fastdist.seuclidean(u, v, V)
+    116.80739235578636
+    """
+    return euclidean(u, v, w=1 / V)
+
+
+@jit(nopython=True, fastmath=True)
+def sqeuclidean(u, v, param=None, w=None):
+    """
+    :purpose:
+    Computes the squared Euclidean distance between two 1D arrays
+
+    :params:
+    u, v   : input arrays, both of shape (n,)
+    param  : placeholder parameter providing interconvertibility of
+             distance functions while using matrix- and vector-
+             related functions
+    w      : weights at each index of u and v. array of shape (n,)
+             if no w is set, it is initialized as an array of ones
+             such that it will have no impact on the output
+
+    :returns:
+    sqeuclidean : float, the squared Euclidean distance between u and v
+
+    :example:
+    >>> from fastdist import fastdist
+    >>> import numpy as np
+    >>> u, v, w = np.random.RandomState(seed=0).rand(10000, 3).T
+    >>> fastdist.sqeuclidean(u, v, w)
+    830.7398837797134
+    """
+    n = len(u)
+    w = init_w(w, n)
+    dist = 0
+    for i in range(n):
+        dist += abs(u[i] - v[i]) ** 2 * w[i]
+    return dist
+
+
+@jit(nopython=True, fastmath=True)
+def hamming(u, v, param=None, w=None):
+    """
+    :purpose:
+    Computes the Hamming distance between two boolean 1D arrays
+
+    :params:
+    u, v   : boolean input arrays, both of shape (n,)
+    param  : placeholder parameter providing interconvertibility of
+             distance functions while using matrix- and vector-
+             related functions
+    w      : weights at each index of u and v. array of shape (n,)
+             if no w is set, it is initialized as an array of ones
+             such that it will have no impact on the output
+
+    :returns:
+    hamming : float, the Hamming distance between u and v
+
+    :example:
+    >>> from fastdist import fastdist
+    >>> import numpy as np
+    >>> u, v = np.random.RandomState(seed=0).randint(2, size=(10000, 2)).T
+    >>> w = np.random.RandomState(seed=0).rand(10000)
+    >>> fastdist.hamming(u, v, w)
+    0.5061006361240681
+    """
+    n = len(u)
+    w = init_w(w, n)
+    num, denom = 0, 0
+    for i in range(n):
+        if u[i] != v[i]:
+            num += w[i]
+        denom += w[i]
+    return num / denom
+
+
+######################################
+# Similarity/dissimilarity functions #
+######################################
+
+
+@jit(nopython=True, fastmath=True)
+def correlation(u, v, param=None, w=None, centered=True):
     """
     :purpose:
     Computes the correlation between two 1D arrays
 
     :params:
     u, v   : input arrays, both of shape (n,)
+    param  : placeholder parameter providing interconvertibility of
+             distance functions while using matrix- and vector-
+             related functions
     w      : weights at each index of u and v. array of shape (n,)
              if no w is set, it is initialized as an array of ones
              such that it will have no impact on the output
@@ -180,7 +398,7 @@ def correlation(u, v, w=None, centered=True):
 
 
 @jit(nopython=True, fastmath=True)
-def cosine(u, v, w=None):
+def cosine(u, v, param=None, w=None):
     """
     :purpose:
     Computes the cosine similarity between two 1D arrays
@@ -188,6 +406,9 @@ def cosine(u, v, w=None):
 
     :params:
     u, v   : input arrays, both of shape (n,)
+    param  : placeholder parameter providing interconvertibility of
+             distance functions while using matrix- and vector-
+             related functions
     w      : weights at each index of u and v. array of shape (n,)
              if no w is set, it is initialized as an array of ones
              such that it will have no impact on the output
@@ -213,6 +434,379 @@ def cosine(u, v, w=None):
 
     denom = (u_norm * v_norm) ** (1 / 2)
     return num / denom
+
+
+@jit(nopython=True, fastmath=True)
+def rel_entr(x, y):
+    """
+    :purpose:
+    Computes the relative entropy between two 1D arrays
+    Used primarily for the jensenshannon function
+
+    :params:
+    x, y   : input arrays, both of shape (n,)
+             to get a numerical value, x and y should be strictly non-negative;
+             negative values result in infinite relative entropy
+
+    :returns:
+    rel_entr : float, the relative entropy distance of x and y
+    """
+    total_entr = 0
+    for i in range(len(x)):
+        if x[i] > 0 and y[i] > 0:
+            total_entr += x[i] * math.log(x[i] / y[i])
+        elif x[i] == 0 and y[i] >= 0:
+            total_entr += 0
+        else:
+            total_entr += np.inf
+    return total_entr
+
+
+@jit(nopython=True, fastmath=True)
+def jensenshannon(p, q, base=None, w=None):
+    """
+    :purpose:
+    Computes the Jensen-Shannon divergence between two 1D probability arrays
+
+    :params:
+    u, v   : input probability arrays, both of shape (n,)
+             note that because these are probability arrays, they are strictly non-negative
+    base   : the base of the logarithm for the output
+    w      : placeholder parameter providing interconvertibility of
+             distance functions while using matrix- and vector-
+             related functions
+
+    :returns:
+    jensenshannon : float, the Jensen-Shannon divergence between u and v
+
+    :example:
+    >>> from fastdist import fastdist
+    >>> import numpy as np
+    >>> u, v = np.random.RandomState(seed=0).uniform(size=(10000, 2)).T
+    >>> fastdist.jensenshannon(u, v, base=2)
+    0.39076147897868996
+    """
+    p_sum, q_sum = 0, 0
+    for i in range(len(p)):
+        p_sum += p[i]
+        q_sum += q[i]
+    p, q = p / p_sum, q / q_sum
+    m = (p + q) / 2
+    num = rel_entr(p, m) + rel_entr(q, m)
+    if base is not None:
+        num /= math.log(base)
+    return (num / 2) ** (1 / 2)
+
+
+@jit(nopython=True, fastmath=True)
+def dice(u, v, param=None, w=None):
+    """
+    :purpose:
+    Computes the Dice dissimilarity between two boolean 1D arrays
+
+    :params:
+    u, v   : boolean input arrays, both of shape (n,)
+    param  : placeholder parameter providing interconvertibility of
+             distance functions while using matrix- and vector-
+             related functions
+    w      : weights at each index of u and v. array of shape (n,)
+             if no w is set, it is initialized as an array of ones
+             such that it will have no impact on the output
+
+    :returns:
+    dice : float, the Dice dissimilarity between u and v
+
+    :example:
+    >>> from fastdist import fastdist
+    >>> import numpy as np
+    >>> u, v = np.random.RandomState(seed=0).randint(2, size=(10000, 2)).T
+    >>> w = np.random.RandomState(seed=0).rand(10000)
+    >>> fastdist.dice(u, v, w)
+    0.5008483098538385
+    """
+    n = len(u)
+    w = init_w(w, n)
+    num, denom = 0, 0
+    for i in range(n):
+        num += u[i] * v[i] * w[i]
+        denom += (u[i] + v[i]) * w[i]
+    return 1 - 2 * num / denom
+
+
+@jit(nopython=True, fastmath=True)
+def jaccard(u, v, param=None, w=None):
+    """
+    :purpose:
+    Computes the Jaccard-Needham dissimilarity between two boolean 1D arrays
+
+    :params:
+    u, v   : boolean input arrays, both of shape (n,)
+    param  : placeholder parameter providing interconvertibility of
+             distance functions while using matrix- and vector-
+             related functions
+    w      : weights at each index of u and v. array of shape (n,)
+             if no w is set, it is initialized as an array of ones
+             such that it will have no impact on the output
+
+    :returns:
+    jaccard : float, the Jaccard-Needham dissimilarity between u and v
+
+    :example:
+    >>> from fastdist import fastdist
+    >>> import numpy as np
+    >>> u, v = np.random.RandomState(seed=0).randint(2, size=(10000, 2)).T
+    >>> w = np.random.RandomState(seed=0).rand(10000)
+    >>> fastdist.jaccard(u, v, w)
+    0.6674202936639468
+    """
+    n = len(u)
+    w = init_w(w, n)
+    num, denom = 0, 0
+    for i in range(n):
+        if u[i] != v[i]:
+            num += w[i]
+            denom += w[i]
+        denom += u[i] * v[i] * w[i]
+    return num / denom
+
+
+@jit(nopython=True, fastmath=True)
+def kulsinski(u, v, param=None, w=None):
+    """
+    :purpose:
+    Computes the Kulsinski dissimilarity between two boolean 1D arrays
+
+    :params:
+    u, v   : boolean input arrays, both of shape (n,)
+    param  : placeholder parameter providing interconvertibility of
+             distance functions while using matrix- and vector-
+             related functions
+    w      : weights at each index of u and v. array of shape (n,)
+             if no w is set, it is initialized as an array of ones
+             such that it will have no impact on the output
+
+    :returns:
+    kulsinski : float, the Kulsinski dissimilarity between u and v
+
+    :example:
+    >>> from fastdist import fastdist
+    >>> import numpy as np
+    >>> u, v = np.random.RandomState(seed=0).randint(2, size=(10000, 2)).T
+    >>> w = np.random.RandomState(seed=0).rand(10000)
+    >>> fastdist.kulsinski(u, v, w)
+    0.8325522836573094
+    """
+    n = len(u)
+    w = init_w(w, n)
+    num, denom = 0, 0
+    for i in range(n):
+        num += (1 - u[i] * v[i]) * w[i]
+        if u[i] != v[i]:
+            num += w[i]
+            denom += w[i]
+        denom += w[i]
+    return num / denom
+
+
+@jit(nopython=True, fastmath=True)
+def rogerstanimoto(u, v, param=None, w=None):
+    """
+    :purpose:
+    Computes the Rogers-Tanimoto dissimilarity between two boolean 1D arrays
+
+    :params:
+    u, v   : boolean input arrays, both of shape (n,)
+    param  : placeholder parameter providing interconvertibility of
+             distance functions while using matrix- and vector-
+             related functions
+    w      : weights at each index of u and v. array of shape (n,)
+             if no w is set, it is initialized as an array of ones
+             such that it will have no impact on the output
+
+    :returns:
+    rogerstanimoto : float, the Rogers-Tanimoto dissimilarity between u and v
+
+    :example:
+    >>> from fastdist import fastdist
+    >>> import numpy as np
+    >>> u, v = np.random.RandomState(seed=0).randint(2, size=(10000, 2)).T
+    >>> w = np.random.RandomState(seed=0).rand(10000)
+    >>> fastdist.rogerstanimoto(u, v, w)
+    0.672067488699178
+    """
+    n = len(u)
+    w = init_w(w, n)
+    r, denom = 0, 0
+    for i in range(n):
+        if u[i] != v[i]:
+            r += 2 * w[i]
+        else:
+            denom += w[i]
+    return r / (denom + r)
+
+
+@jit(nopython=True, fastmath=True)
+def russellrao(u, v, param=None, w=None):
+    """
+    :purpose:
+    Computes the Ruseell-Rao dissimilarity between two boolean 1D arrays
+
+    :params:
+    u, v   : boolean input arrays, both of shape (n,)
+    param  : placeholder parameter providing interconvertibility of
+             distance functions while using matrix- and vector-
+             related functions
+    w      : weights at each index of u and v. array of shape (n,)
+             if no w is set, it is initialized as an array of ones
+             such that it will have no impact on the output
+
+    :returns:
+    russelrao : float, the Russell-Rao dissimilarity between u and v
+
+    :example:
+    >>> from fastdist import fastdist
+    >>> import numpy as np
+    >>> u, v = np.random.RandomState(seed=0).randint(2, size=(10000, 2)).T
+    >>> w = np.random.RandomState(seed=0).rand(10000)
+    >>> fastdist.russellrao(u, v, w)
+    0.7478068878987577
+    """
+    n = len(u)
+    w = init_w(w, n)
+    num, n = 0, 0
+    for i in range(n):
+        num += u[i] * v[i] * w[i]
+        n += w[i]
+    return (n - num) / n
+
+
+@jit(nopython=True, fastmath=True)
+def sokalmichener(u, v, param=None, w=None):
+    """
+    :purpose:
+    Computes the Sokal-Michener dissimilarity between two boolean 1D arrays
+
+    :params:
+    u, v   : boolean input arrays, both of shape (n,)
+    param  : placeholder parameter providing interconvertibility of
+             distance functions while using matrix- and vector-
+             related functions
+    w      : weights at each index of u and v. array of shape (n,)
+             if no w is set, it is initialized as an array of ones
+             such that it will have no impact on the output
+
+    :returns:
+    sokalmichener : float, the Sokal-Michener dissimilarity between u and v
+
+    :example:
+    >>> from fastdist import fastdist
+    >>> import numpy as np
+    >>> u, v = np.random.RandomState(seed=0).randint(2, size=(10000, 2)).T
+    >>> w = np.random.RandomState(seed=0).rand(10000)
+    >>> fastdist.sokalmichener(u, v, w)
+    0.672067488699178
+
+    :note:
+    scipy's implementation returns a different value in the above example.
+    when no w is given, our implementation and scipy's are the same.
+    to replicate scipy's result of 0.8046210454292805, we can replace
+    r += 2 * w[i] with r += 2, but then that does not apply the weights.
+    so, we use (what we think) is the correct weight implementation
+    """
+    n = len(u)
+    w = init_w(w, n)
+    r, s = 0, 0
+    for i in range(n):
+        if u[i] != v[i]:
+            r += 2 * w[i]
+        else:
+            s += w[i]
+    return r / (s + r)
+
+
+@jit(nopython=True, fastmath=True)
+def sokalsneath(u, v, param=None, w=None):
+    """
+    :purpose:
+    Computes the Sokal-Sneath dissimilarity between two boolean 1D arrays
+
+    :params:
+    u, v   : boolean input arrays, both of shape (n,)
+    param  : placeholder parameter providing interconvertibility of
+             distance functions while using matrix- and vector-
+             related functions
+    w      : weights at each index of u and v. array of shape (n,)
+             if no w is set, it is initialized as an array of ones
+             such that it will have no impact on the output
+
+    :returns:
+    sokalsneath : float, the Sokal-Sneath dissimilarity between u and v
+
+    :example:
+    >>> from fastdist import fastdist
+    >>> import numpy as np
+    >>> u, v = np.random.RandomState(seed=0).randint(2, size=(10000, 2)).T
+    >>> w = np.random.RandomState(seed=0).rand(10000)
+    >>> fastdist.sokalsneath(u, v, w)
+    0.8005423661929552
+    """
+    n = len(u)
+    w = init_w(w, n)
+    r, denom = 0, 0
+    for i in range(n):
+        if u[i] != v[i]:
+            r += 2 * w[i]
+        denom += u[i] * v[i] * w[i]
+    return r / (r + denom)
+
+
+@jit(nopython=True, fastmath=True)
+def yule(u, v, param=None, w=None):
+    """
+    :purpose:
+    Computes the Yule dissimilarity between two boolean 1D arrays
+
+    :params:
+    u, v   : boolean input arrays, both of shape (n,)
+    param  : placeholder parameter providing interconvertibility of
+             distance functions while using matrix- and vector-
+             related functions
+    w      : weights at each index of u and v. array of shape (n,)
+             if no w is set, it is initialized as an array of ones
+             such that it will have no impact on the output
+
+    :returns:
+    yule   : float, the Sokal-Sneath dissimilarity between u and v
+
+    :example:
+    >>> from fastdist import fastdist
+    >>> import numpy as np
+    >>> u, v = np.random.RandomState(seed=0).randint(2, size=(10000, 2)).T
+    >>> w = np.random.RandomState(seed=0).rand(10000)
+    >>> fastdist.yule(u, v, w)
+    1.0244476251862624
+    """
+    n = len(u)
+    w = init_w(w, n)
+    ctf, cft, ctt, cff = 0, 0, 0, 0
+    for i in range(n):
+        if u[i] != v[i] and u[i] == 1:
+            ctf += w[i]
+        elif u[i] != v[i] and u[i] == 0:
+            cft += w[i]
+        elif u[i] == v[i] == 1:
+            ctt += w[i]
+        elif u[i] == v[i] == 0:
+            cff += w[i]
+    if (ctt * cff + ctf * cft) != 0:
+        return (2 * ctf * cft) / (ctt * cff + ctf * cft)
+    else:
+        return 0
+
+
+############################
+# Matrix-related functions #
+############################
 
 
 @jit(nopython=True, fastmath=True)
@@ -331,7 +925,7 @@ def cosine_pairwise_distance(a, return_matrix=False):
             for j in range(i):
                 out_mat[i][j] = np.dot(a[i], a[j])
         out_mat = out_mat + out_mat.T
-        np.fill_diagonal(out_mat,1) 
+        np.fill_diagonal(out_mat, 1)
         return out_mat
     else:
         out = np.zeros((len(perm), 1))
@@ -341,520 +935,7 @@ def cosine_pairwise_distance(a, return_matrix=False):
 
 
 @jit(nopython=True, fastmath=True)
-def euclidean(u, v, w=None):
-    """
-    :purpose:
-    Computes the Euclidean distance between two 1D arrays
-
-    :params:
-    u, v   : input arrays, both of shape (n,)
-    w      : weights at each index of u and v. array of shape (n,)
-             if no w is set, it is initialized as an array of ones
-             such that it will have no impact on the output
-
-    :returns:
-    euclidean : float, the Euclidean distance between u and v
-
-    :example:
-    >>> from fastdist import fastdist
-    >>> import numpy as np
-    >>> u, v, w = np.random.RandomState(seed=0).rand(10000, 3).T
-    >>> fastdist.euclidean(u, v, w)
-    28.822558591834163
-    """
-    n = len(u)
-    w = init_w(w, n)
-    dist = 0
-    for i in range(n):
-        dist += abs(u[i] - v[i]) ** 2 * w[i]
-    return dist ** (1 / 2)
-
-
-@jit(nopython=True, fastmath=True)
-def rel_entr(x, y):
-    """
-    :purpose:
-    Computes the relative entropy between two 1D arrays
-    Used primarily for the jensenshannon function
-
-    :params:
-    x, y   : input arrays, both of shape (n,)
-             to get a numerical value, x and y should be strictly non-negative;
-             negative values result in infinite relative entropy
-
-    :returns:
-    rel_entr : float, the relative entropy distance of x and y
-    """
-    total_entr = 0
-    for i in range(len(x)):
-        if x[i] > 0 and y[i] > 0:
-            total_entr += x[i] * math.log(x[i] / y[i])
-        elif x[i] == 0 and y[i] >= 0:
-            total_entr += 0
-        else:
-            total_entr += np.inf
-    return total_entr
-
-
-@jit(nopython=True, fastmath=True)
-def jensenshannon(p, q, base=None):
-    """
-    :purpose:
-    Computes the Jensen-Shannon divergence between two 1D probability arrays
-
-    :params:
-    u, v   : input probability arrays, both of shape (n,)
-             note that because these are probability arrays, they are strictly non-negative
-    base   : the base of the logarithm for the output
-
-    :returns:
-    jensenshannon : float, the Jensen-Shannon divergence between u and v
-
-    :example:
-    >>> from fastdist import fastdist
-    >>> import numpy as np
-    >>> u, v = np.random.RandomState(seed=0).uniform(size=(10000, 2)).T
-    >>> fastdist.jensenshannon(u, v, base=2)
-    0.39076147897868996
-    """
-    p_sum, q_sum = 0, 0
-    for i in range(len(p)):
-        p_sum += p[i]
-        q_sum += q[i]
-    p, q = p / p_sum, q / q_sum
-    m = (p + q) / 2
-    num = rel_entr(p, m) + rel_entr(q, m)
-    if base is not None:
-        num /= math.log(base)
-    return (num / 2) ** (1 / 2)
-
-
-@jit(nopython=True, fastmath=True)
-def mahalanobis(u, v, VI):
-    """
-    :purpose:
-    Computes the Mahalanobis distance between two 1D arrays
-
-    :params:
-    u, v   : input arrays, both of shape (n,)
-    VI     : the inverse of the covariance matrix of u and v
-             note that some arrays will result in a VI containing
-             very high values, leading to some imprecision
-
-    :returns:
-    mahalanobis : float, the Mahalanobis distance between u and v
-
-    :example:
-    >>> from fastdist import fastdist
-    >>> import numpy as np
-    >>> u, v = np.array([2, 0, 0]).astype(np.float64), np.array([0, 1, 0]).astype(np.float64)
-    >>> VI = np.array([[1, 0.5, 0.5], [0.5, 1, 0.5], [0.5, 0.5, 1]])
-    >>> fastdist.mahalanobis(u, v, VI)
-    1.7320508075688772
-    """
-    delta = (u - v)
-    return np.dot(np.dot(delta, VI), delta) ** (1 / 2)
-
-
-@jit(nopython=True, fastmath=True)
-def minkowski(u, v, p, w=None):
-    """
-    :purpose:
-    Computes the Minkowski distance between two 1D arrays
-
-    :params:
-    u, v   : input arrays, both of shape (n,)
-    p      : the order of the norm (p=2 is the same as Euclidean)
-    w      : weights at each index of u and v. array of shape (n,)
-             if no w is set, it is initialized as an array of ones
-             such that it will have no impact on the output
-
-    :returns:
-    minkowski : float, the Minkowski distance between u and v
-
-    :example:
-    >>> from fastdist import fastdist
-    >>> import numpy as np
-    >>> u, v, w = np.random.RandomState(seed=0).rand(10000, 3).T
-    >>> p = 3
-    >>> fastdist.minkowski(u, v, p, w)
-    7.904971256091215
-    """
-    n = len(u)
-    w = init_w(w, n)
-    dist = 0
-    for i in range(n):
-        dist += abs(u[i] - v[i]) ** p * w[i]
-    return dist ** (1 / p)
-
-
-@jit(nopython=True, fastmath=True)
-def seuclidean(u, v, V):
-    """
-    :purpose:
-    Computes the standardized Euclidean distance between two 1D arrays
-
-    :params:
-    u, v   : input arrays, both of shape (n,)
-    V      : array of shape (n,) containing component variances
-
-    :returns:
-    seuclidean : float, the standardized Euclidean distance between u and v
-
-    :example:
-    >>> from fastdist import fastdist
-    >>> import numpy as np
-    >>> u, v, V = np.random.RandomState(seed=0).rand(10000, 3).T
-    >>> fastdist.seuclidean(u, v, V)
-    116.80739235578636
-    """
-    return euclidean(u, v, w=1 / V)
-
-
-@jit(nopython=True, fastmath=True)
-def sqeuclidean(u, v, w=None):
-    """
-    :purpose:
-    Computes the squared Euclidean distance between two 1D arrays
-
-    :params:
-    u, v   : input arrays, both of shape (n,)
-    w      : weights at each index of u and v. array of shape (n,)
-             if no w is set, it is initialized as an array of ones
-             such that it will have no impact on the output
-
-    :returns:
-    sqeuclidean : float, the squared Euclidean distance between u and v
-
-    :example:
-    >>> from fastdist import fastdist
-    >>> import numpy as np
-    >>> u, v, w = np.random.RandomState(seed=0).rand(10000, 3).T
-    >>> fastdist.sqeuclidean(u, v, w)
-    830.7398837797134
-    """
-    n = len(u)
-    w = init_w(w, n)
-    dist = 0
-    for i in range(n):
-        dist += abs(u[i] - v[i]) ** 2 * w[i]
-    return dist
-
-
-@jit(nopython=True, fastmath=True)
-def dice(u, v, w=None):
-    """
-    :purpose:
-    Computes the Dice dissimilarity between two boolean 1D arrays
-
-    :params:
-    u, v   : boolean input arrays, both of shape (n,)
-    w      : weights at each index of u and v. array of shape (n,)
-             if no w is set, it is initialized as an array of ones
-             such that it will have no impact on the output
-
-    :returns:
-    dice : float, the Dice dissimilarity between u and v
-
-    :example:
-    >>> from fastdist import fastdist
-    >>> import numpy as np
-    >>> u, v = np.random.RandomState(seed=0).randint(2, size=(10000, 2)).T
-    >>> w = np.random.RandomState(seed=0).rand(10000)
-    >>> fastdist.dice(u, v, w)
-    0.5008483098538385
-    """
-    n = len(u)
-    w = init_w(w, n)
-    num, denom = 0, 0
-    for i in range(n):
-        num += u[i] * v[i] * w[i]
-        denom += (u[i] + v[i]) * w[i]
-    return 1 - 2 * num / denom
-
-
-@jit(nopython=True, fastmath=True)
-def hamming(u, v, w=None):
-    """
-    :purpose:
-    Computes the Hamming distance between two boolean 1D arrays
-
-    :params:
-    u, v   : boolean input arrays, both of shape (n,)
-    w      : weights at each index of u and v. array of shape (n,)
-             if no w is set, it is initialized as an array of ones
-             such that it will have no impact on the output
-
-    :returns:
-    hamming : float, the Hamming distance between u and v
-
-    :example:
-    >>> from fastdist import fastdist
-    >>> import numpy as np
-    >>> u, v = np.random.RandomState(seed=0).randint(2, size=(10000, 2)).T
-    >>> w = np.random.RandomState(seed=0).rand(10000)
-    >>> fastdist.hamming(u, v, w)
-    0.5061006361240681
-    """
-    n = len(u)
-    w = init_w(w, n)
-    num, denom = 0, 0
-    for i in range(n):
-        if u[i] != v[i]:
-            num += w[i]
-        denom += w[i]
-    return num / denom
-
-
-@jit(nopython=True, fastmath=True)
-def jaccard(u, v, w=None):
-    """
-    :purpose:
-    Computes the Jaccard-Needham dissimilarity between two boolean 1D arrays
-
-    :params:
-    u, v   : boolean input arrays, both of shape (n,)
-    w      : weights at each index of u and v. array of shape (n,)
-             if no w is set, it is initialized as an array of ones
-             such that it will have no impact on the output
-
-    :returns:
-    jaccard : float, the Jaccard-Needham dissimilarity between u and v
-
-    :example:
-    >>> from fastdist import fastdist
-    >>> import numpy as np
-    >>> u, v = np.random.RandomState(seed=0).randint(2, size=(10000, 2)).T
-    >>> w = np.random.RandomState(seed=0).rand(10000)
-    >>> fastdist.jaccard(u, v, w)
-    0.6674202936639468
-    """
-    n = len(u)
-    w = init_w(w, n)
-    num, denom = 0, 0
-    for i in range(n):
-        if u[i] != v[i]:
-            num += w[i]
-            denom += w[i]
-        denom += u[i] * v[i] * w[i]
-    return num / denom
-
-
-@jit(nopython=True, fastmath=True)
-def kulsinski(u, v, w=None):
-    """
-    :purpose:
-    Computes the Kulsinski dissimilarity between two boolean 1D arrays
-
-    :params:
-    u, v   : boolean input arrays, both of shape (n,)
-    w      : weights at each index of u and v. array of shape (n,)
-             if no w is set, it is initialized as an array of ones
-             such that it will have no impact on the output
-
-    :returns:
-    kulsinski : float, the Kulsinski dissimilarity between u and v
-
-    :example:
-    >>> from fastdist import fastdist
-    >>> import numpy as np
-    >>> u, v = np.random.RandomState(seed=0).randint(2, size=(10000, 2)).T
-    >>> w = np.random.RandomState(seed=0).rand(10000)
-    >>> fastdist.kulsinski(u, v, w)
-    0.8325522836573094
-    """
-    n = len(u)
-    w = init_w(w, n)
-    num, denom = 0, 0
-    for i in range(n):
-        num += (1 - u[i] * v[i]) * w[i]
-        if u[i] != v[i]:
-            num += w[i]
-            denom += w[i]
-        denom += w[i]
-    return num / denom
-
-
-@jit(nopython=True, fastmath=True)
-def rogerstanimoto(u, v, w=None):
-    """
-    :purpose:
-    Computes the Rogers-Tanimoto dissimilarity between two boolean 1D arrays
-
-    :params:
-    u, v   : boolean input arrays, both of shape (n,)
-    w      : weights at each index of u and v. array of shape (n,)
-             if no w is set, it is initialized as an array of ones
-             such that it will have no impact on the output
-
-    :returns:
-    rogerstanimoto : float, the Rogers-Tanimoto dissimilarity between u and v
-
-    :example:
-    >>> from fastdist import fastdist
-    >>> import numpy as np
-    >>> u, v = np.random.RandomState(seed=0).randint(2, size=(10000, 2)).T
-    >>> w = np.random.RandomState(seed=0).rand(10000)
-    >>> fastdist.rogerstanimoto(u, v, w)
-    0.672067488699178
-    """
-    n = len(u)
-    w = init_w(w, n)
-    r, denom = 0, 0
-    for i in range(n):
-        if u[i] != v[i]:
-            r += 2 * w[i]
-        else:
-            denom += w[i]
-    return r / (denom + r)
-
-
-@jit(nopython=True, fastmath=True)
-def russellrao(u, v, w=None):
-    """
-    :purpose:
-    Computes the Ruseell-Rao dissimilarity between two boolean 1D arrays
-
-    :params:
-    u, v   : boolean input arrays, both of shape (n,)
-    w      : weights at each index of u and v. array of shape (n,)
-             if no w is set, it is initialized as an array of ones
-             such that it will have no impact on the output
-
-    :returns:
-    russelrao : float, the Russell-Rao dissimilarity between u and v
-
-    :example:
-    >>> from fastdist import fastdist
-    >>> import numpy as np
-    >>> u, v = np.random.RandomState(seed=0).randint(2, size=(10000, 2)).T
-    >>> w = np.random.RandomState(seed=0).rand(10000)
-    >>> fastdist.russellrao(u, v, w)
-    0.7478068878987577
-    """
-    n = len(u)
-    w = init_w(w, n)
-    num, n = 0, 0
-    for i in range(n):
-        num += u[i] * v[i] * w[i]
-        n += w[i]
-    return (n - num) / n
-
-
-@jit(nopython=True, fastmath=True)
-def sokalmichener(u, v, w=None):
-    """
-    :purpose:
-    Computes the Sokal-Michener dissimilarity between two boolean 1D arrays
-
-    :params:
-    u, v   : boolean input arrays, both of shape (n,)
-    w      : weights at each index of u and v. array of shape (n,)
-             if no w is set, it is initialized as an array of ones
-             such that it will have no impact on the output
-
-    :returns:
-    sokalmichener : float, the Sokal-Michener dissimilarity between u and v
-
-    :example:
-    >>> from fastdist import fastdist
-    >>> import numpy as np
-    >>> u, v = np.random.RandomState(seed=0).randint(2, size=(10000, 2)).T
-    >>> w = np.random.RandomState(seed=0).rand(10000)
-    >>> fastdist.sokalmichener(u, v, w)
-    0.672067488699178
-
-    :note:
-    scipy's implementation returns a different value in the above example.
-    when no w is given, our implementation and scipy's are the same.
-    to replicate scipy's result of 0.8046210454292805, we can replace
-    r += 2 * w[i] with r += 2, but then that does not apply the weights.
-    so, we use (what we think) is the correct weight implementation
-    """
-    n = len(u)
-    w = init_w(w, n)
-    r, s = 0, 0
-    for i in range(n):
-        if u[i] != v[i]:
-            r += 2 * w[i]
-        else:
-            s += w[i]
-    return r / (s + r)
-
-
-@jit(nopython=True, fastmath=True)
-def sokalsneath(u, v, w=None):
-    """
-    :purpose:
-    Computes the Sokal-Sneath dissimilarity between two boolean 1D arrays
-
-    :params:
-    u, v   : boolean input arrays, both of shape (n,)
-    w      : weights at each index of u and v. array of shape (n,)
-             if no w is set, it is initialized as an array of ones
-             such that it will have no impact on the output
-
-    :returns:
-    sokalsneath : float, the Sokal-Sneath dissimilarity between u and v
-
-    :example:
-    >>> from fastdist import fastdist
-    >>> import numpy as np
-    >>> u, v = np.random.RandomState(seed=0).randint(2, size=(10000, 2)).T
-    >>> w = np.random.RandomState(seed=0).rand(10000)
-    >>> fastdist.sokalsneath(u, v, w)
-    0.8005423661929552
-    """
-    n = len(u)
-    w = init_w(w, n)
-    r, denom = 0, 0
-    for i in range(n):
-        if u[i] != v[i]:
-            r += 2 * w[i]
-        denom += u[i] * v[i] * w[i]
-    return r / (r + denom)
-
-
-@jit(nopython=True, fastmath=True)
-def yule(u, v, w=None):
-    """
-    :purpose:
-    Computes the Yule dissimilarity between two boolean 1D arrays
-
-    :params:
-    u, v   : boolean input arrays, both of shape (n,)
-    w      : weights at each index of u and v. array of shape (n,)
-             if no w is set, it is initialized as an array of ones
-             such that it will have no impact on the output
-
-    :returns:
-    yule   : float, the Sokal-Sneath dissimilarity between u and v
-
-    :example:
-    >>> from fastdist import fastdist
-    >>> import numpy as np
-    >>> u, v = np.random.RandomState(seed=0).randint(2, size=(10000, 2)).T
-    >>> w = np.random.RandomState(seed=0).rand(10000)
-    >>> fastdist.yule(u, v, w)
-    1.0244476251862624
-    """
-    n = len(u)
-    w = init_w(w, n)
-    ctf, cft, ctt, cff = 0, 0, 0, 0
-    for i in range(n):
-        if u[i] != v[i] and u[i] == 1:
-            ctf += w[i]
-        elif u[i] != v[i] and u[i] == 0:
-            cft += w[i]
-        elif u[i] == v[i] == 1:
-            ctt += w[i]
-        elif u[i] == v[i] == 0:
-            cff += w[i]
-    return (2 * ctf * cft) / (ctt * cff + ctf * cft)
-
-
-@jit(nopython=True, fastmath=True)
-def vector_to_matrix_distance(u, m, metric, metric_name):
+def vector_to_matrix_distance(u, m, metric, metric_name=None, param=None):
     """
     :purpose:
     Computes the distance between a vector and the rows of a matrix using any given metric
@@ -891,12 +972,12 @@ def vector_to_matrix_distance(u, m, metric, metric_name):
     n = m.shape[0]
     out = np.zeros((n))
     for i in range(n):
-        out[i] = metric(u, m[i])
+        out[i] = metric(u, m[i], param)
     return out
 
 
 @jit(nopython=True, fastmath=True)
-def matrix_to_matrix_distance(a, b, metric, metric_name):
+def matrix_to_matrix_distance(a, b, metric, metric_name=None, param=None):
     """
     :purpose:
     Computes the distance between the rows of two matrices using any given metric
@@ -933,12 +1014,12 @@ def matrix_to_matrix_distance(a, b, metric, metric_name):
     out = np.zeros((n, m))
     for i in range(n):
         for j in range(m):
-            out[i][j] = metric(a[i], b[j])
+            out[i][j] = metric(a[i], b[j], param)
     return out
 
 
 @jit(nopython=True, fastmath=True)
-def matrix_pairwise_distance(a, metric, metric_name, return_matrix=False):
+def matrix_pairwise_distance(a, metric, metric_name=None, return_matrix=False, param=None):
     """
     :purpose:
     Computes the distance between the pairwise combinations of the rows of a matrix
@@ -984,12 +1065,12 @@ def matrix_pairwise_distance(a, metric, metric_name, return_matrix=False):
             out_mat = np.zeros((n, n))
             for i in range(n):
                 for j in range(i):
-                    out_mat[i][j] = metric(a[i], a[j])
+                    out_mat[i][j] = metric(a[i], a[j], param)
             return out_mat + out_mat.T
         else:
             out = np.zeros((len(perm), 1))
             for i in range(len(perm)):
-                out[i] = metric(a[perm[i][0]], a[perm[i][1]])
+                out[i] = metric(a[perm[i][0]], a[perm[i][1]], param)
             return out
 
 
@@ -1590,6 +1671,7 @@ def recall_score(targets, preds, cm=None, w=None, average='binary'):
         if cm is None:
             cm = confusion_matrix(targets, preds, w=w)
         return np.array([cm[1][1] / (cm[1][1] + cm[1][0])])
+
 
 @jit(nopython=True, fastmath=True)
 def f1_score(targets, preds, cm=None, w=None, average='binary'):
