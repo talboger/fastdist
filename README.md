@@ -10,6 +10,7 @@ What's new in each version:
 - 1.1.1: large speed optimizations for confusion matrix-based metrics (see more about this in the "1.1.1 speed improvements" section), fix precision and recall scores
 - 1.1.2: speed improvement and bug fix for `cosine_pairwise_distance`
 - 1.1.3: bug fix for `f1_score`, which resulted from v1.1.1 speed improvements
+- 1.1.4: bug fix for `float32`, speed improvements for accuracy score by allowing confusion matrix
 
 ## Installation
 
@@ -194,7 +195,7 @@ y_pred = np.random.randint(2, size=10000)
 ```
 
 Here, fastdist is about 8x faster than sklearn.metrics.
- 
+
 However, now let's say that we need to compute confusion matrices and then also want to compute balanced accuracy:
 
 ```python
@@ -230,4 +231,4 @@ y_pred = np.random.randint(2, size=10000)
 # 9.81 ms ± 1.08 ms per loop (mean ± std. dev. of 7 runs, 100 loops each)
 ```
 
-Saving the confusion matrix computation here makes fastdist's balanced accuracy score 838x faster than sklearn's. 
+Saving the confusion matrix computation here makes fastdist's balanced accuracy score 838x faster than sklearn's.
