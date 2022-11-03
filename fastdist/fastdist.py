@@ -889,7 +889,7 @@ def vector_to_matrix_distance(u, m, metric, metric_name):
         return cosine_vector_to_matrix(u, m)
 
     n = m.shape[0]
-    out = np.zeros((n))
+    out = np.zeros((n), dtype=u.dtype)
     for i in range(n):
         out[i] = metric(u, m[i])
     return out
@@ -930,7 +930,7 @@ def matrix_to_matrix_distance(a, b, metric, metric_name):
     if metric_name == "cosine":
         return cosine_matrix_to_matrix(a, b)
     n, m = a.shape[0], b.shape[0]
-    out = np.zeros((n, m))
+    out = np.zeros((n, m), dtype=a.dtype)
     for i in range(n):
         for j in range(m):
             out[i][j] = metric(a[i], b[j])
@@ -981,13 +981,13 @@ def matrix_pairwise_distance(a, metric, metric_name, return_matrix=False):
         rows = np.arange(n)
         perm = [(rows[i], rows[j]) for i in range(n) for j in range(i + 1, n)]
         if return_matrix:
-            out_mat = np.zeros((n, n))
+            out_mat = np.zeros((n, n), dtype=a.dtype)
             for i in range(n):
                 for j in range(i):
                     out_mat[i][j] = metric(a[i], a[j])
             return out_mat + out_mat.T
         else:
-            out = np.zeros((len(perm), 1))
+            out = np.zeros((len(perm), 1), dtype=a.dtype)
             for i in range(len(perm)):
                 out[i] = metric(a[perm[i][0]], a[perm[i][1]])
             return out
