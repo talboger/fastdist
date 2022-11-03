@@ -1,4 +1,0 @@
-numpy
-numba
-setuptools
-scikit-learn
