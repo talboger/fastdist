@@ -183,8 +183,8 @@ def correlation(u, v, w=None, centered=True):
 def cosine(u, v, w=None):
     """
     :purpose:
-    Computes the cosine similarity between two 1D arrays
-    Unlike scipy's cosine distance, this returns similarity, which is 1 - distance
+    Computes the cosine distance between two 1D arrays
+    NOTE: fastdist before v1.1.5 returned cosine similarity (which is 1 - distance)
 
     :params:
     u, v   : input arrays, both of shape (n,)
@@ -193,14 +193,14 @@ def cosine(u, v, w=None):
              such that it will have no impact on the output
 
     :returns:
-    cosine  : float, the cosine similarity between u and v
+    cosine  : float, the cosine distance between u and v
 
     :example:
     >>> from fastdist import fastdist
     >>> import numpy as np
     >>> u, v, w = np.random.RandomState(seed=0).rand(10000, 3).T
     >>> fastdist.cosine(u, v, w)
-    0.7495065944399267
+    0.2504934055600735
     """
     n = len(u)
     w = init_w(w, n)
@@ -212,7 +212,7 @@ def cosine(u, v, w=None):
         v_norm += abs(v[i]) ** 2 * w[i]
 
     denom = (u_norm * v_norm) ** (1 / 2)
-    return num / denom
+    return 1 - num / denom
 
 
 @jit(nopython=True, fastmath=True)
@@ -240,13 +240,14 @@ def cosine_vector_to_matrix(u, m):
     norm = 0
     for i in range(len(u)):
         norm += abs(u[i]) ** 2
-    u = u / norm ** (1 / 2)
+    u_norm = u / norm ** (1 / 2)
+    m_norm = np.zeros(m.shape)
     for i in range(m.shape[0]):
         norm = 0
         for j in range(len(m[i])):
             norm += abs(m[i][j]) ** 2
-        m[i] = m[i] / norm ** (1 / 2)
-    return np.dot(u, m.T)
+        m_norm[i] = m[i] / norm ** (1 / 2)
+    return np.dot(u_norm, m_norm.T)
 
 
 @jit(nopython=True, fastmath=True)
@@ -271,17 +272,19 @@ def cosine_matrix_to_matrix(a, b):
     >>> fastdist.cosine_matrix_to_matrix(a, b)
     (returns an array of shape (10, 100))
     """
+    a_norm = np.zeros(a.shape)
+    b_norm = np.zeros(b.shape)
     for i in range(a.shape[0]):
         norm = 0
         for j in range(len(a[i])):
             norm += abs(a[i][j]) ** 2
-        a[i] = a[i] / norm ** (1 / 2)
+        a_norm[i] = a[i] / norm ** (1 / 2)
     for i in range(b.shape[0]):
         norm = 0
         for j in range(len(b[i])):
             norm += abs(b[i][j]) ** 2
-        b[i] = b[i] / norm ** (1 / 2)
-    return np.dot(a, b.T)
+        b_norm[i] = b[i] / norm ** (1 / 2)
+    return np.dot(a_norm, b_norm.T)
 
 
 @jit(nopython=True, fastmath=True)
@@ -319,24 +322,25 @@ def cosine_pairwise_distance(a, return_matrix=False):
     n = a.shape[0]
     rows = np.arange(n)
     perm = [(rows[i], rows[j]) for i in range(n) for j in range(i + 1, n)]
+    a_norm = np.zeros(a.shape)
     for i in range(n):
         norm = 0
         for j in range(len(a[i])):
             norm += abs(a[i][j]) ** 2
-        a[i] = a[i] / norm ** (1 / 2)
+        a_norm[i] = a[i] / norm ** (1 / 2)
 
     if return_matrix:
         out_mat = np.zeros((n, n))
         for i in range(n):
             for j in range(i):
-                out_mat[i][j] = np.dot(a[i], a[j])
+                out_mat[i][j] = np.dot(a_norm[i], a_norm[j])
         out_mat = out_mat + out_mat.T
-        np.fill_diagonal(out_mat,1)
+        np.fill_diagonal(out_mat,1) 
         return out_mat
     else:
         out = np.zeros((len(perm), 1))
         for i in range(len(perm)):
-            out[i] = np.dot(a[perm[i][0]], a[perm[i][1]])
+            out[i] = np.dot(a_norm[perm[i][0]], a_norm[perm[i][1]])
         return out
 
 
@@ -889,7 +893,7 @@ def vector_to_matrix_distance(u, m, metric, metric_name):
         return cosine_vector_to_matrix(u, m)
 
     n = m.shape[0]
-    out = np.zeros((n), dtype=u.dtype)
+    out = np.zeros((n))
     for i in range(n):
         out[i] = metric(u, m[i])
     return out
@@ -930,7 +934,7 @@ def matrix_to_matrix_distance(a, b, metric, metric_name):
     if metric_name == "cosine":
         return cosine_matrix_to_matrix(a, b)
     n, m = a.shape[0], b.shape[0]
-    out = np.zeros((n, m), dtype=a.dtype)
+    out = np.zeros((n, m))
     for i in range(n):
         for j in range(m):
             out[i][j] = metric(a[i], b[j])
@@ -981,13 +985,13 @@ def matrix_pairwise_distance(a, metric, metric_name, return_matrix=False):
         rows = np.arange(n)
         perm = [(rows[i], rows[j]) for i in range(n) for j in range(i + 1, n)]
         if return_matrix:
-            out_mat = np.zeros((n, n), dtype=a.dtype)
+            out_mat = np.zeros((n, n))
             for i in range(n):
                 for j in range(i):
                     out_mat[i][j] = metric(a[i], a[j])
             return out_mat + out_mat.T
         else:
-            out = np.zeros((len(perm), 1), dtype=a.dtype)
+            out = np.zeros((len(perm), 1))
             for i in range(len(perm)):
                 out[i] = metric(a[perm[i][0]], a[perm[i][1]])
             return out
@@ -1306,15 +1310,13 @@ def confusion_matrix(targets, preds, w=None, normalize=None):
 
 
 @jit(nopython=True, fastmath=True)
-def accuracy_score(targets, preds, cm=None, w=None, normalize=True):
+def accuracy_score(targets, preds, w=None, normalize=True):
     """
     :purpose:
     Calculates the accuracy score between a discrete target and pred array
 
     :params:
     targets, preds : discrete input arrays, both of shape (n,)
-    cm             : if you have previously calculated a confusion matrix, pass it here to save the computation.
-                     set as None, which makes the function calculate the confusion matrix
     w              : weights at each index of true and pred. array of shape (n,)
                      if no w is set, it is initialized as an array of ones
                      such that it will have no impact on the output
@@ -1333,16 +1335,11 @@ def accuracy_score(targets, preds, cm=None, w=None, normalize=True):
     0.4903
     """
     w = init_w(w, len(targets))
-    if cm is None:
-        cm = confusion_matrix(targets, preds, w=w)
-    n = cm.shape[0]
-
     num, denom = 0, 0
-    for i in range(n):
-        num += cm[i][i]  # sum of the diagonal = true results
-        for j in range(n):
-            denom += cm[i][j]  # total sum = true and false results
-
+    for i in range(len(targets)):
+        if targets[i] == preds[i]:
+            num += w[i]
+        denom += w[i]
     return num / denom if normalize else num
 
 
@@ -1379,119 +1376,15 @@ def balanced_accuracy_score(targets, preds, cm=None, w=None, adjusted=False):
     n = cm.shape[0]
     diag, row_sums = np.zeros(n), np.zeros(n)
     for i in range(n):
-        diag[i] = cm[i][i]  # sum of the diagonal = true results
+        diag[i] = cm[i][i]
         for j in range(n):
-            row_sums[i] += cm[i][j]  # sums of the rows = original ground truth class assignments
+            row_sums[i] += cm[i][j]
 
-    class_div = diag / row_sums  # fraction of correctly recovered targets per class
+    class_div = diag / row_sums
     div_mean = 0
     for i in range(n):
         div_mean += class_div[i]
-    div_mean /= n  # mean fraction of correctly recovered targets
-
-    if adjusted:
-        div_mean -= 1 / n
-        div_mean /= 1 - 1 / n
-    return div_mean
-
-
-@jit(nopython=True, fastmath=True)
-def mean_predictive_value(targets, preds, cm=None, w=None, adjusted=False):
-    """
-    :purpose:
-    Calculates the mean predictive value between a discrete target and pred array
-
-    :params:
-    targets, preds : discrete input arrays, both of shape (n,)
-    cm             : if you have previously calculated a confusion matrix, pass it here to save the computation.
-                     set as None, which makes the function calculate the confusion matrix
-    w              : weights at each index of true and pred. array of shape (n,)
-                     if no w is set, it is initialized as an array of ones
-                     such that it will have no impact on the output
-    adjusted       : bool. if true, adjust the output for chance (making 0 the worst
-                     and 1 the best score). defaults to false
-
-    :returns:
-    mean_predictive_value : float, the mean predictive value of the targets and preds array
-
-    :example:
-    >>> from fastdist import fastdist
-    >>> import numpy as np
-    >>> true = np.random.RandomState(seed=0).randint(2, size=10000)
-    >>> pred = np.random.RandomState(seed=1).randint(2, size=10000)
-    >>> fastdist.mean_predictive_value(true, pred)
-    0.49030739883826424
-
-    by saskra
-    """
-    w = init_w(w, len(targets))
-    if cm is None:
-        cm = confusion_matrix(targets, preds, w=w)
-    n = cm.shape[0]
-    diag, columns_sums = np.zeros(n), np.zeros(n)
-    for i in range(n):
-        diag[i] = cm[i][i]  # sum of the diagonal = true results
-        for j in range(n):
-            columns_sums[j] += cm[i][j]  # sums of the columns = predictions per class
-
-    class_div = diag / columns_sums  # fraction of true results among the predicted ones per class
-    div_mean = 0
-    for i in range(n):
-        div_mean += class_div[i]
-    div_mean /= n  # mean fraction of true results among the predicted ones
-
-    if adjusted:
-        div_mean -= 1 / n
-        div_mean /= 1 - 1 / n
-    return div_mean
-
-
-@jit(nopython=True, fastmath=True)
-def mean_iou(targets, preds, cm=None, w=None, adjusted=False):
-    """
-    :purpose: Calculates the mean intersection of ground truth and prediction over union
-
-    :params:
-    targets, preds : discrete input arrays, both of shape (n,)
-    cm             : if you have previously calculated a confusion matrix, pass it here to save the computation.
-                     set as None, which makes the function calculate the confusion matrix
-    w              : weights at each index of true and pred. array of shape (n,)
-                     if no w is set, it is initialized as an array of ones
-                     such that it will have no impact on the output
-    adjusted       : bool. if true, adjust the output for chance (making 0 the worst
-                     and 1 the best score). defaults to false
-
-    :returns:
-    mean_iou : float, the mean intersection over union of the targets and preds array
-
-    :example:
-    >>> from fastdist import fastdist
-    >>> import numpy as np
-    >>> true = np.random.RandomState(seed=0).randint(2, size=10000)
-    >>> pred = np.random.RandomState(seed=1).randint(2, size=10000)
-    >>> fastdist.mean_iou(true, pred)
-    0.49030739883826424
-
-    by saskra
-    """
-    w = init_w(w, len(targets))
-    if cm is None:
-        cm = confusion_matrix(targets, preds, w=w)
-    n = cm.shape[0]
-    diag, rows_sums, columns_sums = np.zeros(n), np.zeros(n), np.zeros(n)
-    for i in range(n):
-        for j in range(n):
-            if i == j:
-                diag[i] = cm[i][j]  # sum of the diagonal = true results
-            else:
-                rows_sums[i] += cm[i][j]  # rest of the row = false negative results
-                columns_sums[j] += cm[i][j]  # rest of the column = false positive results
-
-    class_div = diag / (columns_sums + rows_sums + diag)  # intersection over union (Jaccard) per class
-    div_mean = 0
-    for i in range(n):
-        div_mean += class_div[i]
-    div_mean /= n  # mean intersection over union
+    div_mean /= n
 
     if adjusted:
         div_mean -= 1 / n
