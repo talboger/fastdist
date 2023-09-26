@@ -335,7 +335,7 @@ def cosine_pairwise_distance(a, return_matrix=False):
             for j in range(i):
                 out_mat[i][j] = np.dot(a_norm[i], a_norm[j])
         out_mat = out_mat + out_mat.T
-        np.fill_diagonal(out_mat,1) 
+        np.fill_diagonal(out_mat,1)
         return out_mat
     else:
         out = np.zeros((len(perm), 1))
@@ -1247,7 +1247,7 @@ def median_absolute_error(true, pred, w=None):
 
 
 @jit(nopython=True, fastmath=True)
-def confusion_matrix(targets, preds, w=None, normalize=None):
+def confusion_matrix(targets, preds, labels=None, w=None, normalize=None):
     """
     :purpose:
     Creates a confusion matrix for an array of target and predicted classes
@@ -1255,6 +1255,10 @@ def confusion_matrix(targets, preds, w=None, normalize=None):
 
     :params:
     targets, preds : discrete input arrays, both of shape (n,)
+    labels         : labels for the confusion matrix classes, used for ordering
+                     and indexing
+                     if none is set, the function uses all unique labels in y_true
+                     and y_pred, sorted
     w              : weights at each index of true and pred. array of shape (n,)
                      if no w is set, it is initialized as an array of ones
                      such that it will have no impact on the output
@@ -1275,13 +1279,18 @@ def confusion_matrix(targets, preds, w=None, normalize=None):
            [2594., 2491.]])
     """
     w = init_w(w, len(targets))
-    n = max(len(np.unique(targets)), len(np.unique(preds)))
+
+    if labels is None:
+        labels = np.array(list(set(targets).union(set(preds))))
+
+    n = len(labels)
+
     cm = np.zeros((n, n))
     for i in range(n):
         for j in range(n):
             correct = 0
             for val in range(len(targets)):
-                if targets[val] == i and preds[val] == j:
+                if targets[val] == labels[i] and preds[val] == labels[j]:
                     correct += w[val]
             cm[i][j] = correct
 

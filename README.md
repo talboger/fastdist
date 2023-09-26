@@ -12,6 +12,7 @@ What's new in each version:
 - 1.1.3: bug fix for `f1_score`, which resulted from v1.1.1 speed improvements
 - 1.1.4: bug fix for `float32`, speed improvements for accuracy score by allowing confusion matrix
 - 1.1.5: make cosine function calculate cosine distance rather than cosine distance (as in earlier versions) for consistency with scipy, fix in-place matrix modification for cosine matrix functions
+- 1.1.6: add `labels` parameter to `confusion_matrix` and fix handling of absent classes
 
 ## Installation
 
@@ -205,7 +206,7 @@ import numpy as np
 from sklearn import metrics
 
 y_true = np.random.randint(2, size=10000)
-y_pred = np.random.randint(2, size=00000)
+y_pred = np.random.randint(2, size=10000)
 
 %timeit fastdist.confusion_matrix(y_true, y_pred)
 # 1.45 ms ± 55.1 µs per loop (mean ± std. dev. of 7 runs, 100 loops each)
