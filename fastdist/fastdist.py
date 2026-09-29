@@ -1345,8 +1345,8 @@ def accuracy_score(targets, preds, cm=None, w=None, normalize=True):
     >>> fastdist.accuracy_score(true, pred)
     0.4903
     """
-    w = init_w(w, len(targets))
     if cm is None:
+        w = init_w(w, len(targets))
         cm = confusion_matrix(targets, preds, w=w)
     n = cm.shape[0]
 
@@ -1386,8 +1386,8 @@ def balanced_accuracy_score(targets, preds, cm=None, w=None, adjusted=False):
     >>> fastdist.balanced_accuracy_score(true, pred)
     0.49030739883826424
     """
-    w = init_w(w, len(targets))
     if cm is None:
+        w = init_w(w, len(targets))
         cm = confusion_matrix(targets, preds, w=w)
     n = cm.shape[0]
     diag, row_sums = np.zeros(n), np.zeros(n)
@@ -1437,8 +1437,8 @@ def mean_predictive_value(targets, preds, cm=None, w=None, adjusted=False):
 
     by saskra
     """
-    w = init_w(w, len(targets))
     if cm is None:
+        w = init_w(w, len(targets))
         cm = confusion_matrix(targets, preds, w=w)
     n = cm.shape[0]
     diag, columns_sums = np.zeros(n), np.zeros(n)
@@ -1487,8 +1487,8 @@ def mean_iou(targets, preds, cm=None, w=None, adjusted=False):
 
     by saskra
     """
-    w = init_w(w, len(targets))
     if cm is None:
+        w = init_w(w, len(targets))
         cm = confusion_matrix(targets, preds, w=w)
     n = cm.shape[0]
     diag, rows_sums, columns_sums = np.zeros(n), np.zeros(n), np.zeros(n)
@@ -1578,9 +1578,9 @@ def precision_score(targets, preds, cm=None, w=None, average='binary'):
     >>> fastdist.precision_score(true, pred)
     array([0.49879856])
     """
-    w = init_w(w, len(targets))
     if average == 'micro':
         if cm is None:
+            w = init_w(w, len(targets))
             cm = confusion_matrix(targets, preds, w=w)
         n = cm.shape[0]
 
@@ -1597,6 +1597,7 @@ def precision_score(targets, preds, cm=None, w=None, average='binary'):
 
     elif average == 'macro':
         if cm is None:
+            w = init_w(w, len(targets))
             cm = confusion_matrix(targets, preds, w=w, normalize='pred')
         n = cm.shape[0]
 
@@ -1613,6 +1614,7 @@ def precision_score(targets, preds, cm=None, w=None, average='binary'):
 
     elif average == 'none':
         if cm is None:
+            w = init_w(w, len(targets))
             cm = confusion_matrix(targets, preds, w=w, normalize='pred')
         n = cm.shape[0]
 
@@ -1626,6 +1628,7 @@ def precision_score(targets, preds, cm=None, w=None, average='binary'):
 
     elif average == 'binary':
         if cm is None:
+            w = init_w(w, len(targets))
             cm = confusion_matrix(targets, preds, w=w)
         return np.array([cm[1][1] / (cm[1][1] + cm[0][1])])
 
@@ -1664,9 +1667,9 @@ def recall_score(targets, preds, cm=None, w=None, average='binary'):
     >>> fastdist.recall_score(true, pred)
     array([0.48987217])
     """
-    w = init_w(w, len(targets))
     if average == 'micro':
         if cm is None:
+            w = init_w(w, len(targets))
             cm = confusion_matrix(targets, preds, w=w)
         n = cm.shape[0]
 
@@ -1683,6 +1686,7 @@ def recall_score(targets, preds, cm=None, w=None, average='binary'):
 
     elif average == 'macro':
         if cm is None:
+            w = init_w(w, len(targets))
             cm = confusion_matrix(targets, preds, w=w, normalize='true')
         n = cm.shape[0]
 
@@ -1699,6 +1703,7 @@ def recall_score(targets, preds, cm=None, w=None, average='binary'):
 
     elif average == 'none':
         if cm is None:
+            w = init_w(w, len(targets))
             cm = confusion_matrix(targets, preds, w=w, normalize='true')
         n = cm.shape[0]
 
@@ -1712,6 +1717,7 @@ def recall_score(targets, preds, cm=None, w=None, average='binary'):
 
     elif average == 'binary':
         if cm is None:
+            w = init_w(w, len(targets))
             cm = confusion_matrix(targets, preds, w=w)
         return np.array([cm[1][1] / (cm[1][1] + cm[1][0])])
 
@@ -1744,7 +1750,6 @@ def f1_score(targets, preds, cm=None, w=None, average='binary'):
     >>> fastdist.f1_score(true, pred)
     array([0.49429507])
     """
-    w = init_w(w, len(targets))
     precision = precision_score(targets, preds, cm=cm, w=w, average=average)
     recall = recall_score(targets, preds, cm=cm, w=w, average=average)
     return np.array([2]) * precision * recall / (precision + recall)
