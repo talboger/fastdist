@@ -154,6 +154,8 @@ def correlation(u, v, w=None, centered=True):
     w      : weights at each index of u and v. array of shape (n,)
              if no w is set, it is initialized as an array of ones
              such that it will have no impact on the output
+    centered : bool. if true, u and v are centered by their (weighted) means.
+               defaults to true
 
     :returns:
     correlation : float, the correlation between u and v
@@ -163,11 +165,17 @@ def correlation(u, v, w=None, centered=True):
     >>> import numpy as np
     >>> u, v, w = np.random.RandomState(seed=0).rand(10000, 3).T
     >>> fastdist.correlation(u, v, w)
-    0.9907907248975348
+    0.9907907248975347
+    >>> fastdist.correlation(u, v, w, centered=False)
+    0.25049340556007105
     """
     n = len(u)
     w = init_w(w, n)
-    u_centered, v_centered = u - np.mean(u), v - np.mean(v)
+    u_mean, v_mean = 0.0, 0.0
+    if centered:
+        w_sum = np.sum(w)
+        u_mean, v_mean = np.sum(u * w) / w_sum, np.sum(v * w) / w_sum
+    u_centered, v_centered = u - u_mean, v - v_mean
     num = 0
     u_norm, v_norm = 0, 0
     for i in range(n):
