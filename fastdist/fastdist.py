@@ -1433,7 +1433,7 @@ def mean_predictive_value(targets, preds, cm=None, w=None, adjusted=False):
     >>> true = np.random.RandomState(seed=0).randint(2, size=10000)
     >>> pred = np.random.RandomState(seed=1).randint(2, size=10000)
     >>> fastdist.mean_predictive_value(true, pred)
-    0.49030739883826424
+    0.4903101860466679
 
     by saskra
     """
@@ -1483,7 +1483,7 @@ def mean_iou(targets, preds, cm=None, w=None, adjusted=False):
     >>> true = np.random.RandomState(seed=0).randint(2, size=10000)
     >>> pred = np.random.RandomState(seed=1).randint(2, size=10000)
     >>> fastdist.mean_iou(true, pred)
-    0.49030739883826424
+    0.32474801982481327
 
     by saskra
     """
