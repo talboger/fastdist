@@ -1247,6 +1247,39 @@ def median_absolute_error(true, pred, w=None):
 
 
 @jit(nopython=True, fastmath=True)
+def unique_labels(targets, preds):
+    """
+    :purpose:
+    Finds the sorted union of the values in targets and preds
+    (used by confusion_matrix when no labels are given). Unlike set() or np.unique,
+    this needs a single pass over the data and no memory proportional to its size
+
+    :params:
+    targets, preds : discrete input arrays, both of shape (n,)
+
+    :returns:
+    labels : sorted array of the distinct values, with the dtype of targets
+    """
+    seen = np.empty(2, dtype=targets.dtype)
+    n_seen = 0
+    for arr in (targets, preds):
+        for val in range(len(arr)):
+            found = False
+            for k in range(n_seen):
+                if seen[k] == arr[val]:
+                    found = True
+                    break
+            if not found:
+                if n_seen == len(seen):
+                    grown = np.empty(2 * len(seen), dtype=targets.dtype)
+                    grown[:n_seen] = seen[:n_seen]
+                    seen = grown
+                seen[n_seen] = arr[val]
+                n_seen += 1
+    return np.sort(seen[:n_seen])
+
+
+@jit(nopython=True, fastmath=True)
 def confusion_matrix(targets, preds, labels=None, w=None, normalize=None):
     """
     :purpose:
@@ -1277,21 +1310,25 @@ def confusion_matrix(targets, preds, labels=None, w=None, normalize=None):
     >>> fastdist.confusion_matrix(true, pred)
     array([[2412., 2503.],
            [2594., 2491.]])
+    >>> fastdist.confusion_matrix(np.array([1000, -5, 3, 1000]), np.array([1000, 3, 3, -5]))
+    array([[0., 1., 0.],
+           [0., 1., 0.],
+           [1., 0., 1.]])
     """
-    w = init_w(w, len(targets))
-
     if labels is None:
-        labels = np.array(list(set(targets).union(set(preds))))
+        labels = unique_labels(targets, preds)
 
     n = len(labels)
 
+    # no weight array is allocated when w is None: for large inputs (e.g. image
+    # segmentation masks) it would be as big as the inputs themselves
     cm = np.zeros((n, n))
     for i in range(n):
         for j in range(n):
-            correct = 0
+            correct = 0.0
             for val in range(len(targets)):
                 if targets[val] == labels[i] and preds[val] == labels[j]:
-                    correct += w[val]
+                    correct += 1.0 if w is None else w[val]
             cm[i][j] = correct
 
     if normalize is None:
