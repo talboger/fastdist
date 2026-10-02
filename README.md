@@ -13,6 +13,7 @@ What's new in each version:
 - 1.1.4: bug fix for `float32`, speed improvements for accuracy score by allowing confusion matrix
 - 1.1.5: make cosine function calculate cosine distance rather than cosine distance (as in earlier versions) for consistency with scipy, fix in-place matrix modification for cosine matrix functions
 - 1.1.6: add `labels` parameter to `confusion_matrix` and fix handling of absent classes
+- 1.1.7: restore `cm` parameters accidentally deleted from versions `1.1.6`; add `mean_predictive_value` and `mean_iou`; other speed and accuracy corrections (from PRs #23, #25, and #26)
 
 ## Installation
 
